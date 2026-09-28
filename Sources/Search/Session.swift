@@ -19,6 +19,10 @@ enum Session {
         var pinID: UUID? = nil
         /// A pin kept as a row (see Tab.listed). Nil for a square.
         var listed: Bool? = nil
+        /// When you last left the tab, so tabs that close themselves count
+        /// the night Search was quit (see Closing.swift). Nil in sessions
+        /// written before then: those tabs start counting at launch.
+        var touched: Date? = nil
     }
 
     struct Shape: Codable {
@@ -97,7 +101,7 @@ enum Session {
 // key it isn't asked for. In extensions, so the memberwise initialisers stay.
 
 extension Session.Entry {
-    private enum Keys: String, CodingKey { case url, title, pin, name, home, groupID, pinID, listed }
+    private enum Keys: String, CodingKey { case url, title, pin, name, home, groupID, pinID, listed, touched }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
@@ -109,6 +113,7 @@ extension Session.Entry {
         groupID = try? c.decodeIfPresent(UUID.self, forKey: .groupID)
         pinID = try? c.decodeIfPresent(UUID.self, forKey: .pinID)
         listed = try? c.decodeIfPresent(Bool.self, forKey: .listed)
+        touched = try? c.decodeIfPresent(Date.self, forKey: .touched)
     }
 }
 

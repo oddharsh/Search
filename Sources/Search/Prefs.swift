@@ -23,6 +23,24 @@ enum Glyph: String, CaseIterable, Identifiable {
     }
 }
 
+/// How long a tab you aren't keeping stays open once you leave it (see
+/// Closing.swift). Arc's four choices, counted in hours.
+enum TabLife: Int, CaseIterable, Identifiable {
+    case halfDay = 12, day = 24, week = 168, month = 720
+
+    var id: Int { rawValue }
+    var interval: TimeInterval { TimeInterval(rawValue) * 60 * 60 }
+
+    var title: String {
+        switch self {
+        case .halfDay: return "12 hours"
+        case .day: return "A day"
+        case .week: return "A week"
+        case .month: return "A month"
+        }
+    }
+}
+
 /// Which edge the tab column sits on when tabs are arranged in a sidebar.
 enum SidebarPosition: String, CaseIterable, Identifiable {
     case left, right
@@ -101,6 +119,14 @@ final class Preferences: ObservableObject {
     /// keep where they were. On unless turned off.
     @Published var sleepsTabs: Bool {
         didSet { store.set(sleepsTabs, forKey: "tabs.sleep") }
+    }
+    /// Tabs you haven't pinned, named or grouped close once left alone for
+    /// `tabLife`, as in Arc. Off unless turned on.
+    @Published var closesTabs: Bool {
+        didSet { store.set(closesTabs, forKey: "tabs.close") }
+    }
+    @Published var tabLife: TabLife {
+        didSet { store.set(tabLife.rawValue, forKey: "tabs.close.after") }
     }
     /// A tab opened behind the page — ⌘-click, the middle button, a batch
     /// of links from another app — waits to load until it is gone to, as a
@@ -382,6 +408,8 @@ final class Preferences: ObservableObject {
         keywords = store.data(forKey: "search.keywords")
             .flatMap { try? JSONDecoder().decode([Keyword].self, from: $0) } ?? []
         sleepsTabs = store.object(forKey: "tabs.sleep") as? Bool ?? true
+        closesTabs = store.bool(forKey: "tabs.close")
+        tabLife = TabLife(rawValue: store.integer(forKey: "tabs.close.after")) ?? .halfDay
         lazyTabs = store.bool(forKey: "tabs.lazy")
         startsFresh = store.bool(forKey: Preferences.freshKey)
         searchesSites = store.bool(forKey: "search.sites")

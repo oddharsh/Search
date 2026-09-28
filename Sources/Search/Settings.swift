@@ -426,6 +426,16 @@ struct SettingsPanel: View {
                 Switch(on: $prefs.sleepsTabs)
             }
             Rule()
+            Line("Close tabs you leave alone", "A tab you haven't looked at for a while closes. Pin it, name it or put it in a group to keep it. ⇧⌘T and History bring one back.") {
+                Switch(on: $prefs.closesTabs)
+            }
+            if prefs.closesTabs {
+                Rule()
+                Line("Close after", "Counted from when you last left the tab, while Search is quit too") {
+                    Segmented(options: TabLife.allCases.map { ($0, $0.title) }, selection: $prefs.tabLife)
+                }
+            }
+            Rule()
             Line("Load background tabs when you go to them", "A link opened behind the page, with ⌘-click or the middle button, or a batch of links from another app, waits until you go to its tab. ⇧⌘-click still takes you there at once.") {
                 Switch(on: $prefs.lazyTabs)
             }
