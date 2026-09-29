@@ -139,6 +139,7 @@ struct SettingsPanel: View {
                     switch page {
                     case .general: general
                     case .tabs:
+                        newTabs
                         tabs
                         if !prefs.sidebar { toolbar }
                     case .shortcuts: ShortcutsPage(browser: browser, store: .shared)
@@ -379,6 +380,46 @@ struct SettingsPanel: View {
     }
 
     // MARK: - tabs
+
+    /// What a new tab opens on: empty, ready to type into, or a page of your
+    /// own. An extension's page, once you let it take the new tab, still
+    /// comes before either.
+    private var newTabs: some View {
+        Card {
+            Line("New tabs open", newTabDetail) {
+                Picker("", selection: $prefs.newTabOpensPage) {
+                    Text("Empty").tag(false)
+                    Text("A page").tag(true)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .fixedSize()
+            }
+            if prefs.newTabOpensPage {
+                ZStack(alignment: .leading) {
+                    if prefs.newTabAddress.isEmpty {
+                        Text("example.com")
+                            .foregroundStyle(Palette.muted.opacity(0.8))
+                    }
+                    TextField("", text: $prefs.newTabAddress)
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(Palette.ink)
+                }
+                .font(.system(size: 12.5))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Palette.wash, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .padding(.horizontal, 14)
+                .padding(.bottom, 11)
+            }
+        }
+    }
+
+    private var newTabDetail: String {
+        guard prefs.newTabOpensPage else { return "The address field, ready to type into" }
+        guard let url = prefs.newTabPage else { return "Type an address below. Until then, empty" }
+        return "Opens \(url.host() ?? url.absoluteString)"
+    }
 
     /// Where back, forward and reload sit with the tabs across the top. With
     /// the sidebar they are already beside the window's buttons: nothing to
