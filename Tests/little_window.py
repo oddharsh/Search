@@ -32,6 +32,12 @@ def press(code, chars, *mods): sv.cmd({"do": "press", "code": code, "chars": cha
 def paste(): return subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
 def windows(**f): return sv.cmd({"do": "windows", **f})
 def records(): return json.load(open(f"{sv.SUPPORT}/windows.json"))
+def found():
+    for _ in range(80):
+        status = little("look")["findStatus"]
+        if status: return status
+        time.sleep(0.05)
+    return ""
 def kept_rows(): return [u for r in records()[1:] for shape in r.get("rows", {}).values() for u in json.dumps(shape).split('"') if u.startswith(sv.BASE)]
 
 
@@ -70,6 +76,26 @@ try:
     t.ok("⌘- zooms it out", little("look")["zoom"] < 1, little("look")["zoom"])
     press(29, "0", "cmd")
     t.ok("⌘0 puts it back", abs(little("look")["zoom"] - 1) < 0.01, little("look")["zoom"])
+
+    # ⌘F: a bar of its own, on its own page; Escape puts the bar away
+    # before it closes the window.
+    little(f"{sv.BASE}/findme"); time.sleep(1.5)
+    press(3, "f", "cmd")
+    t.ok("⌘F opens the small window's find bar", little("look")["finding"])
+    little("find:findme")
+    t.ok("it finds on the small window's page", found() == "1 of 1", little("look"))
+    press(53, "\u001b")
+    st = little("look")
+    t.ok("Escape closes the find bar, not the window", not st["finding"] and len(st["littles"]) == 2, st)
+    press(53, "\u001b")
+
+    # The browser's own find bar, now a FindSession of its own, as before.
+    row = sv.cmd({"do": "open", "url": f"{sv.BASE}/inrow"})["id"]
+    sv.cmd({"do": "wait", "id": row}); sv.cmd({"do": "select", "id": row})
+    r = sv.cmd({"do": "find", "text": "inrow"})
+    t.ok("the browser's find bar still finds on its tab", r["status"] == "1 of 1", r)
+    t.ok("and the small window's find is its own", not little("look")["finding"])
+    sv.cmd({"do": "close", "id": row})
 
     # ⌘W and Escape close it; the browser's row is as it was.
     tabs = little("look")["tabs"]
