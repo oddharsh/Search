@@ -4341,9 +4341,40 @@ final class Browser: NSObject, ObservableObject {
     /// (`commitTabSwitch`).
     func switchTabs(backwards: Bool) {
         guard let activeID else { return }
-        tabSwitcher.partners = switcherPartners
+        // With every space in the switcher (Settings › Tabs), each space is a
+        // row of it, its tabs where they are parked: made now for a space not
+        // visited since launch, as the column makes them for a swipe.
+        var rows: [(space: Space, row: [Tab.ID], showing: Tab.ID?)] = []
+        var theirPairs: [TabSplit] = []
+        var theirTabs: [Tab] = []
+        if prefs.usesSpaces, prefs.switcherSpaceRows, spaces.count > 1 {
+            preloadSpaces()
+            rows = spaces.map { space in
+                guard space.id != spaceID else {
+                    return (space, tabs.filter(standsInRow).map(\.id), activeSplit?.left ?? activeID)
+                }
+                let row = parked[space.id]
+                let theirs = row?.splits ?? []
+                theirPairs += theirs
+                theirTabs += row?.tabs ?? []
+                // A pair stands in its space's row as it does in this one:
+                // once, under its first page.
+                let stands = (row?.tabs ?? []).filter { tab in
+                    !prefs.splitView || !theirs.contains { $0.contains(tab.id) && $0.left != tab.id }
+                }
+                let showing = row?.active.map { id in
+                    prefs.splitView ? theirs.first { $0.contains(id) }?.left ?? id : id
+                }
+                return (space, stands.map(\.id), showing)
+            }
+        }
+        // Another space's pairs are pictured as this one's are.
+        tabSwitcher.partners = switcherPartners.merging(
+            prefs.splitView ? theirPairs.map { ($0.left, $0.right) } : []
+        ) { here, _ in here }
+        tabSwitcher.elsewhere = Dictionary(theirTabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         tabSwitcher.step(row: tabs.filter(standsInRow).map(\.id), current: activeSplit?.left ?? activeID,
-                         backwards: backwards, moons: LittleWindow.stacked)
+                         backwards: backwards, moons: LittleWindow.stacked, spaces: rows)
     }
 
     /// A pair once, under its first page, pictured with its other one.
@@ -4363,10 +4394,22 @@ final class Browser: NSObject, ObservableObject {
     /// window's or a small window's.
     func act(_ action: TabSwitcher.Action, onCard id: Tab.ID, in switcher: TabSwitcher) {
         if let little = LittleWindow.holding(id) { return little.act(action, in: switcher) }
-        guard let tab = tabs.first(where: { $0.id == id }) else { return }
+        // With every space in the switcher, a card can be another space's
+        // tab, parked in its row: found there, and closed out of it.
+        let here = tabs.contains { $0.id == id }
+        let pool = here ? tabs : parkedTabs
+        guard let tab = pool.first(where: { $0.id == id }) else { return }
         // A pair is one card: what's done to it is done to both its pages.
-        let partner = switcher.partners[id].flatMap { other in tabs.first { $0.id == other } }
+        let partner = switcher.partners[id].flatMap { other in pool.first { $0.id == other } }
         switch action {
+        case .close where !here:
+            if tab.pin != nil, partner == nil {
+                tab.rest()
+                return switcher.redraw()
+            }
+            switcher.remove(id)
+            closeParked(tab)
+            if let partner { closeParked(partner) }
         case .close:
             // A pin not on screen is put down where it is and keeps its
             // card, as ⌘W puts one down, without taking you anywhere.
@@ -4412,6 +4455,11 @@ final class Browser: NSObject, ObservableObject {
 
     func commitTabSwitch(picking id: Tab.ID? = nil) {
         guard let target = tabSwitcher.finish(picking: id) else { return }
+        // A card in another space's row: that space, then the tab.
+        if !tabs.contains(where: { $0.id == target }),
+           let space = parked.first(where: { $0.value.tabs.contains { $0.id == target } })?.key {
+            switchSpace(to: space)
+        }
         if let tab = tabs.first(where: { $0.id == target }) {
             select(entry(tab))
         } else {

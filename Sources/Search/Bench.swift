@@ -1123,10 +1123,11 @@ final class Bench {
             let sw = browser.tabSwitcher
             // "keys": Settings › Tabs › Keys in the tab switcher, on or off.
             if let on = request["keys"] as? Bool { browser.prefs.switcherKeys = on }
-            // A moon (a small window's tab) by its address.
+            // Another space's tabs are named too, with every space in the
+            // switcher; a moon (a small window's tab) by its address.
             func short(_ id: Tab.ID?) -> String {
                 guard let id else { return "" }
-                guard let tab = browser.tabs.first(where: { $0.id == id }) else {
+                guard let tab = (browser.tabs + browser.parkedTabs).first(where: { $0.id == id }) else {
                     return LittleWindow.holding(id)?.tab.address?.absoluteString ?? ""
                 }
                 return Bench.short(tab)
@@ -1135,8 +1136,10 @@ final class Bench {
             answer([
                 "visible": sw.visible, "selected": short(sw.selectedID),
                 "candidates": sw.candidates.map { short($0) },
+                "shelves": sw.shelves.map { ["space": $0.space.name, "tabs": $0.ids.map { short($0) }] },
+                "space": browser.space.name,
                 "moons": sw.moons.map { LittleWindow.holding($0)?.tab.address?.absoluteString ?? "" },
-                "muted": (browser.tabs + LittleWindow.all.map(\.tab)).filter(\.muted).map { short($0.id) },
+                "muted": (browser.tabs + browser.parkedTabs + LittleWindow.all.map(\.tab)).filter(\.muted).map { short($0.id) },
                 "panel": box(sw.panelFrame),
                 "cards": Dictionary(sw.cardFrames.map { (short($0.key), box($0.value)) }, uniquingKeysWith: { a, _ in a }),
                 "active": short(browser.activeID),

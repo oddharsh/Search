@@ -501,6 +501,12 @@ final class Preferences: ObservableObject {
     @Published var usesSpaces: Bool {
         didSet { store.set(usesSpaces, forKey: "spaces") }
     }
+    /// With spaces, ⌃Tab shows every space, a row for each under its name,
+    /// rather than only the space on screen (see TabSwitcher.shelves). Off
+    /// unless asked for.
+    @Published var switcherSpaceRows: Bool {
+        didSet { store.set(switcherSpaceRows, forKey: "switcher.spaces") }
+    }
     /// Named, collapsible sections in the sidebar.
     /// Always on since the Settings rework (Drice, 24 Oct 2026): it only
     /// adds a command, so there is no switch. Still a property, for the
@@ -695,6 +701,7 @@ final class Preferences: ObservableObject {
         // existed; they are not asked to sit through it.
         welcomed = store.bool(forKey: "welcomed") || store.object(forKey: "glyph") != nil
         usesSpaces = store.bool(forKey: "spaces")
+        switcherSpaceRows = store.bool(forKey: "switcher.spaces")
         listsPins = store.bool(forKey: "pins.list")
         // "Pins keep their site" is one switch over two keys (see
         // SettingsIndex): on when either was on, on by default when neither
