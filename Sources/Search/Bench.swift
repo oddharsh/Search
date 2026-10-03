@@ -899,14 +899,18 @@ final class Bench {
             // The ⌃Tab switcher as it stands: up or not, the pick, and where
             // the panel and each card are in the window (top-left points).
             let sw = browser.tabSwitcher
+            // Another space's tabs are named too: with every space in the
+            // switcher, its rows hold them.
             func short(_ id: Tab.ID?) -> String {
-                guard let id, let tab = browser.tabs.first(where: { $0.id == id }) else { return "" }
+                guard let id, let tab = (browser.tabs + browser.parkedTabs).first(where: { $0.id == id }) else { return "" }
                 return Bench.short(tab)
             }
             func box(_ r: CGRect) -> [Double] { [r.minX, r.minY, r.width, r.height].map { Double($0) } }
             answer([
                 "visible": sw.visible, "selected": short(sw.selectedID),
                 "candidates": sw.candidates.map { short($0) },
+                "shelves": sw.shelves.map { ["space": $0.space.name, "tabs": $0.ids.map { short($0) }] },
+                "space": browser.space.name,
                 "panel": box(sw.panelFrame),
                 "cards": Dictionary(sw.cardFrames.map { (short($0.key), box($0.value)) }, uniquingKeysWith: { a, _ in a }),
                 "active": short(browser.activeID),
