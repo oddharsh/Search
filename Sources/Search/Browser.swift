@@ -3326,10 +3326,22 @@ final class Browser: NSObject, ObservableObject {
     /// window's or a small window's.
     func act(_ action: TabSwitcher.Action, onCard id: Tab.ID, in switcher: TabSwitcher) {
         if let little = LittleWindow.holding(id) { return little.act(action, in: switcher) }
-        guard let tab = tabs.first(where: { $0.id == id }) else { return }
+        // With every space in the switcher, a card can be another space's
+        // tab, parked in its row: found there, and closed out of it.
+        let here = tabs.contains { $0.id == id }
+        let pool = here ? tabs : parkedTabs
+        guard let tab = pool.first(where: { $0.id == id }) else { return }
         // A pair is one card: what's done to it is done to both its pages.
-        let partner = switcher.partners[id].flatMap { other in tabs.first { $0.id == other } }
+        let partner = switcher.partners[id].flatMap { other in pool.first { $0.id == other } }
         switch action {
+        case .close where !here:
+            if tab.pin != nil, partner == nil {
+                tab.rest()
+                return switcher.redraw()
+            }
+            switcher.remove(id)
+            closeParked(tab)
+            if let partner { closeParked(partner) }
         case .close:
             // A pin not on screen is put down where it is and keeps its
             // card, as ⌘W puts one down, without taking you anywhere.
