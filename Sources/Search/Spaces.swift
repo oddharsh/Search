@@ -194,6 +194,14 @@ extension Browser {
         if floater.showing { land() }
         writeSession(now: true)
         for tab in tabs where visibleTabIDs.contains(tab.id) { tab.touch() }
+        // The row swaps before `activeID` changes, so the switcher never sees
+        // this tab being left: with every space in it, it is told here, for
+        // its place in the order and its picture. A pair is left under its
+        // first page, as when going to another tab.
+        if prefs.usesSpaces, prefs.switcherSpaceRows, let id = activeSplit?.left ?? activeID,
+           let left = tabs.first(where: { $0.id == id }) {
+            tabSwitcher.left(left, alive: Set((tabs + parkedTabs).map(\.id)))
+        }
 
         // The row on screen is parked as it is, sound and all: music or a
         // stream keeps playing in the space you left, as it does in a tab

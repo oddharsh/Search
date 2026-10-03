@@ -297,6 +297,12 @@ final class Preferences: ObservableObject {
     @Published var usesSpaces: Bool {
         didSet { store.set(usesSpaces, forKey: "spaces") }
     }
+    /// With spaces, ⌃Tab shows every space, a row for each under its name,
+    /// rather than only the space on screen (see TabSwitcher.shelves). Off
+    /// unless asked for.
+    @Published var switcherSpaceRows: Bool {
+        didSet { store.set(switcherSpaceRows, forKey: "switcher.spaces") }
+    }
     /// Named, collapsible sections in the sidebar. Off unless asked for.
     @Published var usesTabGroups: Bool {
         didSet { store.set(usesTabGroups, forKey: "tabs.groups") }
@@ -423,6 +429,7 @@ final class Preferences: ObservableObject {
         // existed; they are not asked to sit through it.
         welcomed = store.bool(forKey: "welcomed") || store.object(forKey: "glyph") != nil
         usesSpaces = store.bool(forKey: "spaces")
+        switcherSpaceRows = store.bool(forKey: "switcher.spaces")
         usesTabGroups = store.bool(forKey: "tabs.groups")
         listsPins = store.bool(forKey: "pins.list")
         splitView = store.bool(forKey: "splitView")
