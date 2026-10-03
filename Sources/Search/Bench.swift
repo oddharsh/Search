@@ -1626,7 +1626,7 @@ final class Bench {
                 menus[item.title] = menu.items.filter { !$0.isSeparatorItem && !$0.isHidden }.map(\.title)
             }
             answer(["menus": menus, "ai": browser.prefs.ai, "shipped": AI.shipped,
-                    "settingsPages": SettingsPanel.Page.allCases.filter { $0 != .ai || AI.shipped }.map(\.rawValue),
+                    "settingsPages": SettingsPanel.Page.blocks.flatMap { $0 }.map(\.rawValue),
                     "settingsPage": browser.settingsPage.rawValue])
 
         case "textcheck":
