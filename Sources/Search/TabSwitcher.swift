@@ -58,6 +58,20 @@ final class TabSwitcher: ObservableObject {
     /// pages pictured side by side (see Browser.switchTabs).
     var partners: [Tab.ID: Tab.ID] = [:]
 
+    /// With Settings › Tabs › Every space in the tab switcher, a row for each
+    /// space, in the order ⌃1–⌃9 go: its five latest, in the same order the
+    /// space on screen gets. Empty otherwise, and the switcher is the one
+    /// grid it always was. From #358, by oddharsh.
+    struct Shelf: Identifiable {
+        let space: Space
+        let ids: [Tab.ID]
+        var id: UUID { space.id }
+    }
+    @Published private(set) var shelves: [Shelf] = []
+    /// The other spaces' tabs on show, by id, for their cards to be found:
+    /// they are in none of a window's rows (see Browser.switchTabs).
+    var elsewhere: [Tab.ID: Tab] = [:]
+
     /// Where the panel and each card are in the window, for the pointer to be
     /// matched against (see `hover(at:)` and Browser.clickTabSwitcher). From
     /// #358, by oddharsh.
@@ -85,7 +99,7 @@ final class TabSwitcher: ObservableObject {
 
     /// The card at a point in the window, if any.
     func card(at point: CGPoint) -> Tab.ID? {
-        cardFrames.first { $0.value.contains(point) && ring.contains($0.key) }?.key
+        cardFrames.first { $0.value.contains(point) && everyCard.contains($0.key) }?.key
     }
 
     /// A click while the panel is up, at a point in the window's top-left
@@ -112,6 +126,20 @@ final class TabSwitcher: ObservableObject {
     /// or the moons first when the gesture started on one.
     private var ring: [Tab.ID] { moonsLead ? moons + candidates : candidates + moons }
 
+    /// Every card on show: the ring, and with every space in the switcher
+    /// the other spaces' rows, which ⌃↑ and ⌃↓ reach.
+    private var everyCard: [Tab.ID] { ring + shelves.flatMap(\.ids).filter { !candidates.contains($0) } }
+
+    /// The row of another space a card is in, with every space in the
+    /// switcher: Tab and ⌃← ⌃→ go round it rather than the ring.
+    private func otherRow(_ id: Tab.ID) -> [Tab.ID]? {
+        guard !candidates.contains(id) else { return nil }
+        return shelves.first { $0.ids.contains(id) }?.ids
+    }
+
+    /// Whether a card is another space's, in its row of the switcher.
+    func isElsewhere(_ id: Tab.ID) -> Bool { otherRow(id) != nil }
+
     private var previewRequests: [Tab.ID: UUID] = [:]
     private var reveal: DispatchWorkItem?
     private var previewRequested = false
@@ -131,10 +159,19 @@ final class TabSwitcher: ObservableObject {
     /// before this one: a quick press goes back to the last tab, and the
     /// next comes back again. ⇧ starts from the far end, which is the last
     /// moon when there are any: the walk is one ring, grid then moons.
-    func step(row: [Tab.ID], current: Tab.ID, backwards: Bool, moons: [Tab.ID] = []) {
+    ///
+    /// `spaces`, with every space in the switcher: each space's row and the
+    /// tab it was showing, each to be a row of the switcher, five to a row.
+    /// Once the pick is in another space's row, Tab walks that row.
+    func step(row: [Tab.ID], current: Tab.ID, backwards: Bool, moons: [Tab.ID] = [],
+              spaces: [(space: Space, row: [Tab.ID], showing: Tab.ID?)] = []) {
         guard active else {
             guard row.contains(current) else { return }
-            let planet = ordered(row: row, current: current)
+            let planet = Array(ordered(row: row, current: current).prefix(spaces.isEmpty ? 10 : 5))
+            shelves = spaces
+                .map { Shelf(space: $0.space, ids: $0.row.contains(current)
+                    ? planet : Array(ordered(row: $0.row, current: $0.showing).prefix(5))) }
+                .filter { !$0.ids.isEmpty }
             begin(home: current, planet: planet, moons: moons.filter { !planet.contains($0) },
                   moonsLead: false, backwards: backwards)
             return
@@ -171,22 +208,25 @@ final class TabSwitcher: ObservableObject {
         candidates = planet
         self.moons = Array(moons.prefix(Self.maxMoons))
         self.moonsLead = moonsLead
-        // One tab and a small window is still somewhere to go.
-        guard ring.count > 1, ring.first == home else {
+        // One tab and a small window is still somewhere to go, and so is
+        // another space.
+        guard ring.count > 1 || shelves.count > 1, ring.first == home else {
             candidates = []
             self.moons = []
             self.moonsLead = false
+            shelves = []
+            elsewhere = [:]
             return
         }
         self.home = home
-        selectedID = backwards ? ring.last : ring[1]
+        selectedID = backwards ? ring.last : ring[min(1, ring.count - 1)]
         let work = DispatchWorkItem { [weak self] in self?.show() }
         reveal = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
     }
 
     private func walk(backwards: Bool) {
-        let ring = ring
+        let ring = selectedID.flatMap(otherRow) ?? self.ring
         guard let selectedID, let index = ring.firstIndex(of: selectedID) else { return }
         let next = (index + (backwards ? -1 : 1) + ring.count) % ring.count
         self.selectedID = ring[next]
@@ -194,9 +234,12 @@ final class TabSwitcher: ObservableObject {
     }
 
     /// Left and right go round the ring, grid and moons both; up and down
-    /// stay in the grid's columns, or the moons' own.
+    /// stay in the grid's columns, or the moons' own. With every space in
+    /// the switcher, up and down go to the space above or below, at the same
+    /// place in its row or its last card, and stop at the first and last;
+    /// left and right in another space's row go round that row.
     func move(_ direction: Direction) {
-        let ring = ring
+        let ring = selectedID.flatMap(otherRow) ?? self.ring
         guard let selectedID, let index = ring.firstIndex(of: selectedID) else { return }
         show()
         switch direction {
@@ -209,6 +252,12 @@ final class TabSwitcher: ObservableObject {
                 // Within its own column.
                 guard moons.indices.contains(next), next / per == moon / per else { return }
                 self.selectedID = moons[next]
+            } else if let at = shelves.firstIndex(where: { $0.ids.contains(selectedID) }),
+                      let place = shelves[at].ids.firstIndex(of: selectedID) {
+                let to = at + (direction == .up ? -1 : 1)
+                guard shelves.indices.contains(to) else { return }
+                let there = shelves[to].ids
+                self.selectedID = there[min(place, there.count - 1)]
             } else if let card = candidates.firstIndex(of: selectedID) {
                 if direction == .up {
                     guard card >= 5 else { return }
@@ -227,13 +276,19 @@ final class TabSwitcher: ObservableObject {
     func remove(_ id: Tab.ID) {
         guard active else { return }
         guard id != home else { return cancel() }
-        let before = ring
+        // The pick goes on along the line the card was in: the ring, or,
+        // with every space in the switcher, another space's row.
+        let before = otherRow(id) ?? ring
         guard let index = before.firstIndex(of: id) else { return }
         candidates.removeAll { $0 == id }
         moons.removeAll { $0 == id }
+        // Out of its space's row too, so that no step lands where it was.
+        if !shelves.isEmpty {
+            shelves = shelves.map { Shelf(space: $0.space, ids: $0.ids.filter { $0 != id }) }.filter { !$0.ids.isEmpty }
+        }
         cardFrames[id] = nil
-        guard ring.count > 1 else { return cancel() }
-        if selectedID == id { selectedID = before[(index + 1) % before.count] }
+        guard ring.count > 1 || shelves.count > 1 else { return cancel() }
+        if selectedID == id { selectedID = before.count > 1 ? before[(index + 1) % before.count] : ring.first }
     }
 
     /// A card changed without the switcher's own lists changing (a tab
@@ -242,7 +297,7 @@ final class TabSwitcher: ObservableObject {
 
     func finish(picking id: Tab.ID? = nil) -> Tab.ID? {
         let target = id ?? selectedID
-        let valid = target.flatMap { ring.contains($0) ? $0 : nil }
+        let valid = target.flatMap { everyCard.contains($0) ? $0 : nil }
         cancel()
         return valid
     }
@@ -254,6 +309,8 @@ final class TabSwitcher: ObservableObject {
         generation = UUID()
         candidates = []
         moons = []
+        shelves = []
+        elsewhere = [:]
         home = nil
         moonsLead = false
         selectedID = nil
@@ -294,7 +351,8 @@ final class TabSwitcher: ObservableObject {
     }
 
     func cachePreview(_ image: NSImage, for id: Tab.ID, address: URL) {
-        let shown = ring.contains(id) || candidates.contains { partners[$0] == id }
+        let cards = everyCard
+        let shown = cards.contains(id) || cards.contains { partners[$0] == id }
         guard kept(id) || (visible && shown) else { return }
         previews[id] = (address, image)
     }
@@ -304,7 +362,7 @@ final class TabSwitcher: ObservableObject {
         guard visible, !previewRequested else { return }
         previewRequested = true
         let token = generation
-        let firsts = [selectedID].compactMap { $0 } + ring.filter { $0 != selectedID }
+        let firsts = [selectedID].compactMap { $0 } + everyCard.filter { $0 != selectedID }
         let orderedIDs = firsts.flatMap { id in [id] + [partners[id]].compactMap { $0 } }
         let ordered = orderedIDs.compactMap(tab)
             .filter { $0.id == current || preview(for: $0.id, address: $0.address) == nil }
@@ -336,8 +394,9 @@ final class TabSwitcher: ObservableObject {
         guard active, !visible else { return }
         reveal?.cancel()
         reveal = nil
-        let seconds = Set(candidates.compactMap { partners[$0] })
-        previews = previews.filter { key, _ in ring.contains(key) || seconds.contains(key) }
+        let cards = everyCard
+        let seconds = Set(cards.compactMap { partners[$0] })
+        previews = previews.filter { key, _ in cards.contains(key) || seconds.contains(key) }
         visible = true
     }
 }
@@ -356,6 +415,11 @@ struct TabSwitcherOverlay: View {
     /// which has a switcher of its own.
     var host: Tab.ID?
     let pick: (Tab.ID) -> Void
+    @Namespace private var highlight
+
+    /// A card's tab: the window's or a small window's, or, with every space
+    /// in the switcher, another space's.
+    private func find(_ id: Tab.ID) -> Tab? { tab(id) ?? switcher.elsewhere[id] }
 
     /// A moon's card beside a grid card, at its biggest: small, as the
     /// small window is.
@@ -378,8 +442,12 @@ struct TabSwitcherOverlay: View {
                 // The moons' panel, its gap to the grid and its own padding,
                 // come out of the room the grid's cards had.
                 let moonRoom: CGFloat = moonColumns == 0 ? 0 : 14 + 16 + CGFloat(moonColumns - 1) * 6
-                let width = min(176, (geometry.size.width - 64 - CGFloat(columns - 1) * 8 - moonRoom)
-                    / (CGFloat(columns) + Self.moonScale * CGFloat(moonColumns)))
+                // With every space, five to a row, and the rows' names come
+                // out of the height too (see `shelfWidth`).
+                let width = switcher.shelves.isEmpty
+                    ? min(176, (geometry.size.width - 64 - CGFloat(columns - 1) * 8 - moonRoom)
+                        / (CGFloat(columns) + Self.moonScale * CGFloat(moonColumns)))
+                    : shelfWidth(in: geometry.size, moonRoom: moonRoom, moonColumns: moonColumns)
                 let previewHeight = (width - 16) * 0.62
                 let cardHeight = previewHeight + 39
                 ZStack {
@@ -388,7 +456,11 @@ struct TabSwitcherOverlay: View {
                         .onTapGesture { switcher.cancel() }
 
                     HStack(alignment: .center, spacing: 14) {
-                        grid(width: width, previewHeight: previewHeight, cardHeight: cardHeight)
+                        if switcher.shelves.isEmpty {
+                            grid(width: width, previewHeight: previewHeight, cardHeight: cardHeight)
+                        } else {
+                            shelved(width: width, previewHeight: previewHeight, cardHeight: cardHeight)
+                        }
                         if moonColumns > 0 { moons(width: width * Self.moonScale, columns: moonColumns) }
                     }
                     // The grid's cards and the moons' both.
@@ -404,7 +476,7 @@ struct TabSwitcherOverlay: View {
             .task(id: switcher.selectedID) {
                 try? await Task.sleep(nanoseconds: 120_000_000)
                 guard !Task.isCancelled else { return }
-                switcher.capturePreviews(of: tab, current: current)
+                switcher.capturePreviews(of: find, current: current)
             }
         }
     }
@@ -437,6 +509,66 @@ struct TabSwitcherOverlay: View {
                 if prefs.switcherKeys { legend }
             }
         }
+        .padding(12)
+        .background(Palette.ground, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Palette.hairline))
+        .background(GeometryReader { box in
+            Color.clear.preference(key: PanelFrame.self, value: box.frame(in: .global))
+        })
+        .onPreferenceChange(PanelFrame.self) { frame in
+            MainActor.assumeIsolated { switcher.panelFrame = frame }
+        }
+    }
+
+    /// A card's width with every space: five to a row, the moons beside, and
+    /// every row in the window rather than any scrolled out of it, down to
+    /// 96 points.
+    private func shelfWidth(in size: CGSize, moonRoom: CGFloat, moonColumns: Int) -> CGFloat {
+        let rows = CGFloat(switcher.shelves.count)
+        let across = (size.width - 64 - 4 * 8 - moonRoom) / (5 + Self.moonScale * CGFloat(moonColumns))
+        // Each row also carries its name, 24 points, and 10 between rows.
+        let down = ((size.height - 88 - (rows - 1) * 10) / rows - 24 - 39) / 0.62 + 16
+        return max(96, min(176, across, down))
+    }
+
+    /// With every space: a row for each, under the space's icon and name, the
+    /// name in full ink on the row the pick is in. The grid's highlight is
+    /// placed by offset, which assumes one grid with no names between its
+    /// rows; this one goes from card to card instead.
+    private func shelved(width: CGFloat, previewHeight: CGFloat, cardHeight: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(switcher.shelves) { shelf in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: shelf.space.symbol)
+                            .font(.system(size: 10, weight: .medium))
+                        Text(shelf.space.name)
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(switcher.selectedID.map(shelf.ids.contains) == true ? Palette.ink : Palette.muted)
+                    .frame(height: 18)
+                    .padding(.leading, 8)
+                    HStack(spacing: 8) {
+                        ForEach(shelf.ids, id: \.self) { id in
+                            if let tab = find(id) {
+                                card(tab, width: width, previewHeight: previewHeight, height: cardHeight)
+                                    .background {
+                                        if id == switcher.selectedID {
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .fill(Palette.faint)
+                                                .matchedGeometryEffect(id: "pick", in: highlight)
+                                        }
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+            // The keys reach every card here, another space's too (see
+            // Browser.act).
+            if prefs.switcherKeys { legend }
+        }
+        .animation(Motion.glide, value: switcher.selectedID)
         .padding(12)
         .background(Palette.ground, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Palette.hairline))
@@ -544,7 +676,7 @@ struct TabSwitcherOverlay: View {
     }
 
     private func card(_ tab: Tab, width: CGFloat, previewHeight: CGFloat, height: CGFloat) -> some View {
-        let partner: Tab? = switcher.partners[tab.id].flatMap(self.tab)
+        let partner: Tab? = switcher.partners[tab.id].flatMap(find)
         let caption: String = partner.map { tab.label + " · " + $0.label } ?? tab.label
         let side: CGFloat = partner == nil ? width - 16 : (width - 18) / 2
         return Button { pick(tab.id) } label: {
