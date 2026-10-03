@@ -962,7 +962,7 @@ final class Bench {
                 "shelves": sw.shelves.map { ["space": $0.space.name, "tabs": $0.ids.map { short($0) }] },
                 "space": browser.space.name,
                 "moons": sw.moons.map { LittleWindow.holding($0)?.tab.address?.absoluteString ?? "" },
-                "muted": (browser.tabs + LittleWindow.all.map(\.tab)).filter(\.muted).map { short($0.id) },
+                "muted": (browser.tabs + browser.parkedTabs + LittleWindow.all.map(\.tab)).filter(\.muted).map { short($0.id) },
                 "panel": box(sw.panelFrame),
                 "cards": Dictionary(sw.cardFrames.map { (short($0.key), box($0.value)) }, uniquingKeysWith: { a, _ in a }),
                 "active": short(browser.activeID),

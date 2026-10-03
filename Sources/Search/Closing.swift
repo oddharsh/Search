@@ -91,8 +91,9 @@ extension Browser {
 
     /// A tab of a space not on screen: out of its row, and the row written.
     /// It isn't offered to ⇧⌘T, which would reopen it in the space on screen
-    /// with that space's sign-ins; History still has it.
-    private func closeParked(_ tab: Tab) {
+    /// with that space's sign-ins; History still has it. ⌃W on another
+    /// space's card in the switcher closes it this way too.
+    func closeParked(_ tab: Tab) {
         guard let space = parked.first(where: { $0.value.tabs.contains { $0 === tab } })?.key,
               var row = parked[space] else { return }
         row.tabs.removeAll { $0 === tab }
