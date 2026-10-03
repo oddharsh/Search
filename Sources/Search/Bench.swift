@@ -912,6 +912,8 @@ final class Bench {
             // The ⌃Tab switcher as it stands: up or not, the pick, and where
             // the panel and each card are in the window (top-left points).
             let sw = browser.tabSwitcher
+            // "keys": Settings › Tabs › Keys in the tab switcher, on or off.
+            if let on = request["keys"] as? Bool { browser.prefs.switcherKeys = on }
             // Another space's tabs are named too, with every space in the
             // switcher; a moon (a small window's tab) by its address.
             func short(_ id: Tab.ID?) -> String {
@@ -928,6 +930,7 @@ final class Bench {
                 "shelves": sw.shelves.map { ["space": $0.space.name, "tabs": $0.ids.map { short($0) }] },
                 "space": browser.space.name,
                 "moons": sw.moons.map { LittleWindow.holding($0)?.tab.address?.absoluteString ?? "" },
+                "muted": (browser.tabs + LittleWindow.all.map(\.tab)).filter(\.muted).map { short($0.id) },
                 "panel": box(sw.panelFrame),
                 "cards": Dictionary(sw.cardFrames.map { (short($0.key), box($0.value)) }, uniquingKeysWith: { a, _ in a }),
                 "active": short(browser.activeID),
