@@ -17,7 +17,7 @@ struct SettingsPanel: View {
     @State private var page: Page = Page(rawValue: Store.settings.string(forKey: "settings.page") ?? "") ?? .general
 
     enum Page: String, CaseIterable, Identifiable {
-        case general, tabs, shortcuts, extensions, passwords, downloads, privacy, ai, about
+        case general, tabs, shortcuts, extensions, passwords, downloads, privacy, ai, flags, about
         var id: String { rawValue }
         var title: String {
             switch self {
@@ -29,6 +29,7 @@ struct SettingsPanel: View {
             case .downloads: return "Downloads"
             case .privacy: return "Privacy"
             case .ai: return "AI"
+            case .flags: return "Flags"
             case .about: return "About"
             }
         }
@@ -42,6 +43,7 @@ struct SettingsPanel: View {
             case .downloads: return "arrow.down.circle"
             case .privacy: return "hand.raised"
             case .ai: return "sparkles"
+            case .flags: return "flag"
             case .about: return "info.circle"
             }
         }
@@ -78,7 +80,8 @@ struct SettingsPanel: View {
                 .padding(.horizontal, 10)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
-            ForEach(Page.allCases) { item in
+            // Flags only in a stack build, which has something to list there.
+            ForEach(Page.allCases.filter { $0 != .flags || !Stack.features.isEmpty }) { item in
                 PageRow(page: item, on: page == item) { page = item }
             }
             Spacer(minLength: 0)
@@ -147,6 +150,7 @@ struct SettingsPanel: View {
                     case .downloads: downloads
                     case .privacy: privacy
                     case .ai: AISettings(browser: browser, prefs: prefs)
+                    case .flags: FlagsPage(prefs: prefs) { page = $0 }
                     case .about: about
                     }
                 }
