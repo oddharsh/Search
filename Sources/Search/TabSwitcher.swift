@@ -564,12 +564,9 @@ struct TabSwitcherOverlay: View {
                     }
                 }
             }
-            // The keys act on this window's cards and the small windows;
-            // another space's tabs aren't in reach of them, and the legend
-            // fades rather than promise what they'd do there.
-            if prefs.switcherKeys {
-                legend.opacity(switcher.selectedID.map(switcher.isElsewhere) == true ? 0.35 : 1)
-            }
+            // The keys reach every card here, another space's too (see
+            // Browser.act).
+            if prefs.switcherKeys { legend }
         }
         .animation(Motion.glide, value: switcher.selectedID)
         .padding(12)
