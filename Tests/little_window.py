@@ -71,6 +71,13 @@ try:
     press(29, "0", "cmd")
     t.ok("⌘0 puts it back", abs(little("look")["zoom"] - 1) < 0.01, little("look")["zoom"])
 
+    # The app the link came from, by the site's name; none for a link that
+    # names none.
+    sv.cmd({"do": "little", "what": f"{sv.BASE}/sent", "from": "com.apple.finder"}); time.sleep(1)
+    t.ok("the small window names the app the link came from", little("look")["from"] == "Finder", little("look"))
+    press(13, "w", "cmd")
+    t.ok("and none when the link names none", little("look")["from"] == "", little("look"))
+
     # ⌘W and Escape close it; the browser's row is as it was.
     tabs = little("look")["tabs"]
     press(13, "w", "cmd")

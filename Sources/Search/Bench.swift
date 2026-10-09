@@ -2257,11 +2257,16 @@ final class Bench {
             case "look": break
             default:
                 guard let text = request["what"] as? String, let url = URL(string: text) else { answer(["error": "little needs a url, keep or close"]); return }
-                LittleWindow.show(url, for: browser, front: false)
+                // "from": a bundle id, standing for the app that sent it.
+                let sender = (request["from"] as? String)
+                    .flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0).first }
+                    .flatMap(LinkSender.init(app:))
+                LittleWindow.show(url, for: browser, from: sender, front: false)
             }
             answer([
                 "littles": LittleWindow.all.map { $0.tab.address?.absoluteString ?? "" },
                 "said": LittleWindow.all.last?.said ?? "",
+                "from": LittleWindow.all.last?.sender?.name ?? "",
                 "zoom": LittleWindow.all.last?.tab.built.map { Double($0.pageZoom) } ?? 0,
                 "failures": LittleWindow.all.map { $0.tab.failure ?? "" },
                 "tabs": browser.tabs.map { ($0.pin != nil ? "PIN " : "") + ($0.address?.host() ?? "blank") },

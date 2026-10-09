@@ -34,11 +34,11 @@ final class LittleWindow: NSObject, NSWindowDelegate {
     /// A link from another app, in a small window in front of it.
     /// `front: false` makes it without showing it — for the bench, which
     /// must never put a window on screen.
-    static func show(_ url: URL, for browser: Browser, front: Bool = true) {
+    static func show(_ url: URL, for browser: Browser, from sender: LinkSender? = nil, front: Bool = true) {
         let tab = Tab(configuration: Web.configuration(space: browser.spaceID))
         browser.prepare(tab)
         tab.go(to: url)
-        let little = LittleWindow(tab: tab)
+        let little = LittleWindow(tab: tab, sender: sender)
         open.append(little)
         watchKeys()
         little.window.center()
@@ -58,14 +58,18 @@ final class LittleWindow: NSObject, NSWindowDelegate {
     var windowNumber: Int { window.windowNumber }
     var said: String? { note.text }
 
+    /// The app the link came from, shown by the site's name.
+    let sender: LinkSender?
+
     /// The small window a key was pressed in, if it was one.
     static func owning(_ window: NSWindow?) -> LittleWindow? {
         guard let window else { return nil }
         return open.first { $0.window === window }
     }
 
-    private init(tab: Tab) {
+    private init(tab: Tab, sender: LinkSender?) {
         self.tab = tab
+        self.sender = sender
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
             styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
@@ -77,7 +81,7 @@ final class LittleWindow: NSObject, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 420, height: 320)
         window.delegate = self
-        window.contentView = NSHostingView(rootView: LittleView(tab: tab, note: note, keep: { [weak self] in self?.keep() }))
+        window.contentView = NSHostingView(rootView: LittleView(tab: tab, note: note, from: sender, keep: { [weak self] in self?.keep() }))
         // A zoom said at this window's foot, not the browser's behind it,
         // where Browser.prepare pointed it; kept, the tab is prepared again
         // and says it there.
@@ -209,6 +213,8 @@ struct LittleView: View {
     @ObservedObject var tab: Tab
     /// Its window's line at the foot; an extension's popup has none.
     var note: LittleNote? = nil
+    /// The app the link came from, if it named one.
+    var from: LinkSender? = nil
     let keep: (() -> Void)?
     @StateObject private var tint = PageTint()
 
@@ -265,11 +271,24 @@ struct LittleView: View {
             // Room for the window's own buttons, which sit on this line.
             Spacer().frame(width: 64)
             Spacer(minLength: 0)
-            Text(site)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            // The site, and the app the link came from in front of it, as
+            // its icon: a link from Slack reads as one at a glance.
+            HStack(spacing: 6) {
+                if let icon = from?.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 15, height: 15)
+                }
+                Text(site)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .help(from.map { "From \($0.name)" } ?? "")
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(from.map { "\(site), from \($0.name)" } ?? site)
             Spacer(minLength: 0)
             if let keep {
                 KeepButton(action: keep)
@@ -336,6 +355,33 @@ struct LittleView: View {
         case "chrome-extension", "webkit-extension": return "Extension page"
         default: return url.absoluteString == "about:blank" ? "" : "Not a website"
         }
+    }
+}
+
+/// The app a link came from, as it handed the link over: its name and its
+/// icon, kept from then, since the app may quit while the window is open.
+struct LinkSender {
+    let name: String
+    let icon: NSImage?
+
+    /// The app that sent an Apple Event, by the process the event names
+    /// (keySenderPIDAttr). Only an app with a place in the Dock: a tool run
+    /// from a script or a terminal (open, osascript) isn't one to name.
+    /// Measured with Slack and Telegram, 9 Oct 2026: each link names the
+    /// app itself, not a helper of it, and the app in front by then is
+    /// already Search, so that is no way to tell.
+    init?(event: NSAppleEventDescriptor?) {
+        guard let pid = event?.attributeDescriptor(forKeyword: AEKeyword(keySenderPIDAttr))?.int32Value,
+              pid != ProcessInfo.processInfo.processIdentifier,
+              let app = NSRunningApplication(processIdentifier: pid)
+        else { return nil }
+        self.init(app: app)
+    }
+
+    init?(app: NSRunningApplication) {
+        guard app.activationPolicy == .regular, let name = app.localizedName else { return nil }
+        self.name = name
+        icon = app.icon
     }
 }
 

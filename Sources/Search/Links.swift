@@ -139,7 +139,7 @@ final class Links: NSObject, NSApplicationDelegate {
         guard let text = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
               let url = URL(string: text), url.scheme?.lowercased().hasPrefix("http") == true
         else { return }
-        Links.take(url)
+        Links.take(url, from: LinkSender(event: event))
     }
 
     /// Files and anything else the system opens with the app: an address, or
@@ -148,8 +148,9 @@ final class Links: NSObject, NSApplicationDelegate {
     /// build.sh), which this used to drop without a word.
     func application(_ application: NSApplication, open urls: [URL]) {
         guard !Store.testing else { return }
+        let sender = LinkSender(event: NSAppleEventManager.shared().currentAppleEvent)
         for url in urls where url.isFileURL || url.scheme?.lowercased().hasPrefix("http") == true {
-            Links.take(url)
+            Links.take(url, from: sender)
         }
     }
 
@@ -262,8 +263,10 @@ final class Links: NSObject, NSApplicationDelegate {
     /// A link as another app hands one over, for the bench.
     static func arrived(_ url: URL) { take(url) }
 
-    private static func take(_ url: URL) {
-        if MainActor.assumeIsolated({ little(url) }) { return }
+    /// `sender` is the app that handed the link over, when the event names
+    /// one: the small window shows it (see LinkSender).
+    private static func take(_ url: URL, from sender: LinkSender? = nil) {
+        if MainActor.assumeIsolated({ little(url, from: sender) }) { return }
         if let deliver {
             deliver(url)
         } else {
@@ -279,13 +282,13 @@ final class Links: NSObject, NSApplicationDelegate {
     /// window back first, so the browser came up behind the small window
     /// every time. Open in Search is what brings it now.
     @MainActor
-    private static func little(_ url: URL) -> Bool {
+    private static func little(_ url: URL, from sender: LinkSender?) -> Bool {
         guard Shared.prefs.littleLinks else { return false }
         if !launched { Browsers.keepAway() }
         // The space and sign-ins of the window in front, on screen or not.
         let browser = Browsers.front.flatMap { $0.extensionPopup == nil ? $0 : nil }
             ?? Browsers.primary ?? SceneSlot.shared.browser
-        LittleWindow.show(url, for: browser)
+        LittleWindow.show(url, for: browser, from: sender)
         return true
     }
 
