@@ -232,15 +232,28 @@ struct LittleView: View {
     private var stage: some View {
         if #available(macOS 26, *) {
             ZStack(alignment: .top) {
-                WebStage(page: page)
+                shown
                 bar.background(alignment: .top) { band }
             }
         } else {
             VStack(spacing: 0) {
                 bar.background(tint.ground)
-                WebStage(page: page)
+                shown
             }
         }
+    }
+
+    /// The page; and a page that never came saying so, with Try again, as in
+    /// a tab. On macOS 26 the line lies over it as it does over the page.
+    private var shown: some View {
+        ZStack {
+            WebStage(page: page)
+            if let failure = tab.failure {
+                Trouble(message: failure) { tab.reload() }
+                    .transition(.opacity)
+            }
+        }
+        .animation(Motion.quick, value: tab.failure)
     }
 
     private var page: PageView { tab.built ?? tab.web }
