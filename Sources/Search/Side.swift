@@ -687,6 +687,7 @@ private struct SideRow: View {
             } else {
                 if prefs.glyph == .icons, !tab.isBlank {
                     Mark(icon: tab.icon, letter: tab.monogram, size: 15)
+                        .modifier(AddressClick(armed: live && interactive && prefs.clickRenamesTab) { browser.beginTabEdit(tab) })
                 }
                 if tab.bench {
                     // A script's tab, not yours.
@@ -779,7 +780,7 @@ private struct SideRow: View {
         .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .modifier(OneClick(double: false) {
             guard interactive else { return }
-            if live { browser.beginTabEdit(tab) } else { browser.select(tab) }
+            if live { browser.beginTabClick(tab) } else { browser.select(tab) }
         })
         .overlay { if interactive { MiddleClick(act: close) } }
         .onHover { hovering = $0 }
