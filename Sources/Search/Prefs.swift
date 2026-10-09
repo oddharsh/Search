@@ -645,6 +645,13 @@ final class Preferences: ObservableObject {
             if oldValue, !profilesInOneWindow { Browsers.unmerge() }
         }
     }
+    /// In full screen with the tabs down the side, the window's buttons stay
+    /// in the column's corner (see FullScreenLights), and macOS's own title
+    /// bar, band and shadow, is kept out of the way. Off unless asked for:
+    /// off, full screen is as upstream has it, the corner given up.
+    @Published var fullScreenLights: Bool {
+        didSet { store.set(fullScreenLights, forKey: "fullscreen.lights") }
+    }
     /// Named, collapsible sections in the sidebar.
     /// Always on since the Settings rework (Drice, 24 Oct 2026): it only
     /// adds a command, so there is no switch. Still a property, for the
@@ -866,6 +873,7 @@ final class Preferences: ObservableObject {
         welcomed = store.bool(forKey: "welcomed") || store.object(forKey: "glyph") != nil
         usesSpaces = store.bool(forKey: "spaces")
         profilesInOneWindow = store.bool(forKey: "profiles.oneWindow")
+        fullScreenLights = store.bool(forKey: "fullscreen.lights")
         listsPins = store.bool(forKey: "pins.list")
         // "Pins keep their site" is one switch over two keys (see
         // SettingsIndex): on when either was on, on by default when neither
