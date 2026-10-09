@@ -35,8 +35,10 @@ struct SideBar: View {
     private var innerEdge: Alignment { onRight ? .leading : .trailing }
 
     /// The window's buttons' corner: gone in full screen, where macOS takes
-    /// them away, and back, forward and reload move up to the edge (idea 184).
-    private var lights: CGFloat { browser.fullScreen ? 0 : Metrics.sideLights }
+    /// them away, and back, forward and reload move up to the edge (idea 184)
+    /// — unless Flags keeps the buttons in the column there, in which case
+    /// the column puts buttons of its own in it (see FullScreenLights).
+    private var lights: CGFloat { browser.fullScreen && !prefs.fullScreenLights ? 0 : Metrics.sideLights }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -69,6 +71,15 @@ struct SideBar: View {
                     Spacer(minLength: 0)
                 }
                 .frame(height: Metrics.strip)
+                .overlay(alignment: .topLeading) {
+                    if browser.fullScreen, prefs.fullScreenLights {
+                        // Measured from the column's own edge, as the real
+                        // ones are, not from inside its padding.
+                        FullScreenLights()
+                            .frame(width: 10 + lights, height: Metrics.strip)
+                            .padding(.leading, -10)
+                    }
+                }
 
                 // The spaces side by side, as pages: two fingers sideways move
                 // the one on screen and the next one together, the next one
