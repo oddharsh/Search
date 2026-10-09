@@ -92,6 +92,8 @@ struct FindBar: View {
         .shadow(color: .black.opacity(0.10), radius: 18, y: 5)
         .padding(.top, 12)
         .padding(.trailing, 14)
+        .frame(maxWidth: availableWidth == nil ? nil : .infinity,
+               maxHeight: availableWidth == nil ? nil : .infinity, alignment: .topTrailing)
         .animation(Motion.quick, value: find.missed)
         .onAppear(perform: focus)
         .onChange(of: find.findFocus) { _, _ in focus() }
