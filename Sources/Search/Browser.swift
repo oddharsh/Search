@@ -3304,15 +3304,17 @@ final class Browser: NSObject, ObservableObject {
         select(entry(shown[index]))
     }
 
-    /// ⌃Tab with the switcher on: the space's tabs, the most recently used
-    /// first. Nothing changes until ⌃ is let go of (`commitTabSwitch`).
+    /// ⌃Tab: the space's tabs, the most recently used first, and the small
+    /// windows beside them. Nothing changes until ⌃ is let go of
+    /// (`commitTabSwitch`).
     func switchTabs(backwards: Bool) {
         guard let activeID else { return }
         // With every space in the switcher (Settings › Tabs), each space is a
         // row of it, its tabs where they are parked: made now for a space not
         // visited since launch, as the column makes them for a swipe.
         var rows: [(space: Space, row: [Tab.ID], showing: Tab.ID?)] = []
-        var pairs = splits
+        var theirPairs: [TabSplit] = []
+        var theirTabs: [Tab] = []
         if prefs.usesSpaces, prefs.switcherSpaceRows, spaces.count > 1 {
             preloadSpaces()
             rows = spaces.map { space in
@@ -3321,7 +3323,8 @@ final class Browser: NSObject, ObservableObject {
                 }
                 let row = parked[space.id]
                 let theirs = row?.splits ?? []
-                pairs += theirs
+                theirPairs += theirs
+                theirTabs += row?.tabs ?? []
                 // A pair stands in its space's row as it does in this one:
                 // once, under its first page.
                 let stands = (row?.tabs ?? []).filter { tab in
@@ -3333,11 +3336,34 @@ final class Browser: NSObject, ObservableObject {
                 return (space, stands.map(\.id), showing)
             }
         }
-        // A pair once, under its first page, pictured with its other one.
-        tabSwitcher.partners = prefs.splitView
-            ? Dictionary(pairs.map { ($0.left, $0.right) }, uniquingKeysWith: { first, _ in first }) : [:]
+        // Another space's pairs are pictured as this one's are.
+        tabSwitcher.partners = switcherPartners.merging(
+            prefs.splitView ? theirPairs.map { ($0.left, $0.right) } : []
+        ) { here, _ in here }
+        tabSwitcher.elsewhere = Dictionary(theirTabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         tabSwitcher.step(row: tabs.filter(standsInRow).map(\.id), current: activeSplit?.left ?? activeID,
-                         backwards: backwards, spaces: rows)
+                         backwards: backwards, moons: LittleWindow.stacked, spaces: rows)
+    }
+
+    /// A pair once, under its first page, pictured with its other one.
+    var switcherPartners: [Tab.ID: Tab.ID] {
+        prefs.splitView ? Dictionary(splits.map { ($0.left, $0.right) }, uniquingKeysWith: { first, _ in first }) : [:]
+    }
+
+    /// The row as the switcher's grid shows it, for a small window's
+    /// switcher to show as its planet (see TabSwitcher.ordered).
+    var switcherPlanet: [Tab.ID] {
+        tabSwitcher.ordered(row: tabs.filter(standsInRow).map(\.id), current: activeSplit?.left ?? activeID)
+    }
+
+    /// A tab picked in a small window's switcher: that tab, in this window,
+    /// in front. A test run goes to the tab and puts nothing on a screen.
+    func bringForward(_ id: Tab.ID) {
+        guard let tab = tabs.first(where: { $0.id == id }) else { return }
+        select(entry(tab))
+        guard !Store.testing, let window else { return }
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
     }
 
     /// A click while the switcher is up, at a point in the window's own
@@ -3347,14 +3373,7 @@ final class Browser: NSObject, ObservableObject {
     /// a ⌃-click is a right-click to AppKit, not a click the card's button
     /// can be counted on to take. From #358, by oddharsh.
     func clickTabSwitcher(at point: CGPoint) -> Bool {
-        guard tabSwitcher.visible else { return false }
-        guard tabSwitcher.panelFrame.contains(point) else {
-            tabSwitcher.cancel()
-            return true
-        }
-        // Between two cards: the switcher's, and nothing happens.
-        if let id = tabSwitcher.card(at: point) { commitTabSwitch(picking: id) }
-        return true
+        tabSwitcher.click(at: point) { commitTabSwitch(picking: $0) }
     }
 
     func commitTabSwitch(picking id: Tab.ID? = nil) {
@@ -3364,8 +3383,13 @@ final class Browser: NSObject, ObservableObject {
            let space = parked.first(where: { $0.value.tabs.contains { $0.id == target } })?.key {
             switchSpace(to: space)
         }
-        guard let tab = tabs.first(where: { $0.id == target }) else { return }
-        select(entry(tab))
+        if let tab = tabs.first(where: { $0.id == target }) {
+            select(entry(tab))
+        } else {
+            // A moon: its small window comes forward, and the row stays as
+            // it was. Open in Search is still what moves it in.
+            LittleWindow.holding(target)?.front()
+        }
     }
 
     /// A link opened from a page lands next to the page it came from, not at
