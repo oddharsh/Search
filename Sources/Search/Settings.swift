@@ -444,6 +444,12 @@ struct SettingsPanel: View {
             Line("Spaces", "Separate sets of tabs, signed in where the others are or starting afresh, switched with ⌃1–⌃9, two fingers sideways over the column, or the space's icon. Mission Control's own ⌃1–⌃9, if you turned them on, take those keys first.") {
                 Switch(on: $prefs.usesSpaces)
             }
+            if prefs.usesSpaces {
+                Rule()
+                Line("Every space in the tab switcher", "A row for each space in ⌃Tab, its latest tabs under its name. ⌃↑ and ⌃↓ move between them.") {
+                    Switch(on: $prefs.switcherSpaceRows)
+                }
+            }
             Rule()
             Line("Tab groups", "Named sections in the sidebar. Right-click a tab to start a group; click its heading to hide or show its tabs.") {
                 Switch(on: $prefs.usesTabGroups)
