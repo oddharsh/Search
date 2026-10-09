@@ -297,6 +297,13 @@ final class Preferences: ObservableObject {
     @Published var usesSpaces: Bool {
         didSet { store.set(usesSpaces, forKey: "spaces") }
     }
+    /// In full screen with the tabs down the side, the window's buttons stay
+    /// in the column's corner (see FullScreenLights), and macOS's own title
+    /// bar, band and shadow, is kept out of the way. Off unless asked for:
+    /// off, full screen is as upstream has it, the corner given up.
+    @Published var fullScreenLights: Bool {
+        didSet { store.set(fullScreenLights, forKey: "fullscreen.lights") }
+    }
     /// Named, collapsible sections in the sidebar. Off unless asked for.
     @Published var usesTabGroups: Bool {
         didSet { store.set(usesTabGroups, forKey: "tabs.groups") }
@@ -428,6 +435,7 @@ final class Preferences: ObservableObject {
         // existed; they are not asked to sit through it.
         welcomed = store.bool(forKey: "welcomed") || store.object(forKey: "glyph") != nil
         usesSpaces = store.bool(forKey: "spaces")
+        fullScreenLights = store.bool(forKey: "fullscreen.lights")
         usesTabGroups = store.bool(forKey: "tabs.groups")
         listsPins = store.bool(forKey: "pins.list")
         splitView = store.bool(forKey: "splitView")
