@@ -309,7 +309,7 @@ final class Preferences: ObservableObject {
     }
     /// A click on the tab you're on names it, and its site's mark edits the
     /// address (Browser.beginTabClick, AddressClick). Off, a click on it
-    /// edits the address, as upstream has it. On unless turned off.
+    /// edits the address, as upstream has it. Off unless asked for.
     @Published var clickRenamesTab: Bool {
         didSet { store.set(clickRenamesTab, forKey: "tabs.clickRenames") }
     }
@@ -436,7 +436,7 @@ final class Preferences: ObservableObject {
         usesSpaces = store.bool(forKey: "spaces")
         usesTabGroups = store.bool(forKey: "tabs.groups")
         listsPins = store.bool(forKey: "pins.list")
-        clickRenamesTab = store.object(forKey: "tabs.clickRenames") as? Bool ?? true
+        clickRenamesTab = store.bool(forKey: "tabs.clickRenames")
         splitView = store.bool(forKey: "splitView")
         ai = AI.shipped && store.bool(forKey: "ai")
         aiProvider = store.string(forKey: "ai.provider").flatMap(AIProvider.init(rawValue:))
