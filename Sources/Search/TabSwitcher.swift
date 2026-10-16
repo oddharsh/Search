@@ -10,6 +10,32 @@ import SwiftUI
 final class TabSwitcher: ObservableObject {
     enum Direction { case left, right, up, down }
 
+    /// A letter pressed with ⌃ still held, on the card picked: what its ⌘
+    /// key does to the tab on screen, done to that card instead. Only with
+    /// Settings › Tabs › Keys in the tab switcher on.
+    enum Action {
+        /// ⌃W: closed as ⌘W closes it (a pin is put down); a small window closed.
+        case close
+        /// ⌃R: its page loaded again.
+        case reload
+        /// ⌃M: its sound off, or on again.
+        case mute
+        /// ⌃O: a small window into the row, as its Open in Search.
+        case keep
+
+        init?(_ event: NSEvent) {
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard flags == .control else { return nil }
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "w": self = .close
+            case "r": self = .reload
+            case "m": self = .mute
+            case "o": self = .keep
+            default: return nil
+            }
+        }
+    }
+
     /// The tabs left, latest first, in every space: going back to a space
     /// finds its order where it was. Kept only while the switcher is on.
     private var recentIDs: [Tab.ID] = []
@@ -110,6 +136,9 @@ final class TabSwitcher: ObservableObject {
         guard !candidates.contains(id) else { return nil }
         return shelves.first { $0.ids.contains(id) }?.ids
     }
+
+    /// Whether a card is another space's, in its row of the switcher.
+    func isElsewhere(_ id: Tab.ID) -> Bool { otherRow(id) != nil }
 
     private var previewRequests: [Tab.ID: UUID] = [:]
     private var reveal: DispatchWorkItem?
@@ -240,6 +269,31 @@ final class TabSwitcher: ObservableObject {
             }
         }
     }
+
+    /// A card closed from the switcher: out of the grid or the moons, and
+    /// the pick on to the next one. The one the gesture started on closed
+    /// ends it, as ⌘W there would; so does nowhere left to go.
+    func remove(_ id: Tab.ID) {
+        guard active else { return }
+        guard id != home else { return cancel() }
+        // The pick goes on along the line the card was in: the ring, or,
+        // with every space in the switcher, another space's row.
+        let before = otherRow(id) ?? ring
+        guard let index = before.firstIndex(of: id) else { return }
+        candidates.removeAll { $0 == id }
+        moons.removeAll { $0 == id }
+        // Out of its space's row too, so that no step lands where it was.
+        if !shelves.isEmpty {
+            shelves = shelves.map { Shelf(space: $0.space, ids: $0.ids.filter { $0 != id }) }.filter { !$0.ids.isEmpty }
+        }
+        cardFrames[id] = nil
+        guard ring.count > 1 || shelves.count > 1 else { return cancel() }
+        if selectedID == id { selectedID = before.count > 1 ? before[(index + 1) % before.count] : ring.first }
+    }
+
+    /// A card changed without the switcher's own lists changing (a tab
+    /// muted from it): drawn again.
+    func redraw() { objectWillChange.send() }
 
     func finish(picking id: Tab.ID? = nil) -> Tab.ID? {
         let target = id ?? selectedID
@@ -452,6 +506,7 @@ struct TabSwitcherOverlay: View {
                         }
                     }
                 }
+                if prefs.switcherKeys { legend }
             }
         }
         .padding(12)
@@ -509,6 +564,12 @@ struct TabSwitcherOverlay: View {
                     }
                 }
             }
+            // The keys act on this window's cards and the small windows;
+            // another space's tabs aren't in reach of them, and the legend
+            // fades rather than promise what they'd do there.
+            if prefs.switcherKeys {
+                legend.opacity(switcher.selectedID.map(switcher.isElsewhere) == true ? 0.35 : 1)
+            }
         }
         .animation(Motion.glide, value: switcher.selectedID)
         .padding(12)
@@ -520,6 +581,23 @@ struct TabSwitcherOverlay: View {
         .onPreferenceChange(PanelFrame.self) { frame in
             MainActor.assumeIsolated { switcher.panelFrame = frame }
         }
+    }
+
+    /// The letters that act on the card picked while ⌃ is held (see
+    /// TabSwitcher.Action), under the grid; Open in Search only on a moon.
+    private var legend: some View {
+        let moon = switcher.selectedID.map(switcher.moons.contains) == true
+        let keys = [("W", "Close"), ("R", "Reload"), ("M", "Mute")] + (moon ? [("O", "Open in Search")] : [])
+        return HStack(spacing: 14) {
+            ForEach(keys, id: \.0) { key, name in
+                HStack(spacing: 4) {
+                    Text("⌃" + key).font(.system(size: 10.5, weight: .medium)).foregroundStyle(Palette.ink)
+                    Text(name).font(.system(size: 10.5)).foregroundStyle(Palette.muted)
+                }
+            }
+        }
+        .padding(.top, 2)
+        .accessibilityElement(children: .combine)
     }
 
     /// The moons: the small windows, in a panel of their own beside the
@@ -592,6 +670,14 @@ struct TabSwitcherOverlay: View {
         .frame(width: width, height: height)
     }
 
+    /// A card whose sound is off, as ⌃M leaves it.
+    private var mutedMark: some View {
+        Image(systemName: "speaker.slash.fill")
+            .font(.system(size: 9.5))
+            .foregroundStyle(Palette.muted)
+            .accessibilityLabel("Muted")
+    }
+
     private func card(_ tab: Tab, width: CGFloat, previewHeight: CGFloat, height: CGFloat) -> some View {
         let partner: Tab? = switcher.partners[tab.id].flatMap(find)
         let caption: String = partner.map { tab.label + " · " + $0.label } ?? tab.label
@@ -616,6 +702,7 @@ struct TabSwitcherOverlay: View {
                         .font(.system(size: 11.5))
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
+                    if tab.muted || partner?.muted == true { mutedMark }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -646,11 +733,14 @@ struct TabSwitcherOverlay: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Palette.hairline))
 
-                Text(tab.label)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 4) {
+                    Text(tab.label)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                    if tab.muted { mutedMark }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(6)
             .frame(width: width, alignment: .topLeading)
