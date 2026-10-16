@@ -133,7 +133,7 @@ private struct SplitTabHalf: View {
             .modifier(OneClick(double: false) {
                 guard interactive, NSEvent.modifierFlags.intersection([.command, .shift]).isEmpty else { return }
                 browser.clearTabSelection()
-                if focused { browser.beginTabEdit(tab) }
+                if focused { browser.beginTabClick(tab) }
                 else { browser.focusPane(tab) }
             })
             .modifier(ModifiedTabClick {
@@ -217,6 +217,10 @@ private struct SplitTabHalf: View {
                 if prefs.glyph == .icons || narrow {
                     Mark(icon: tab.icon, letter: tab.monogram, size: stacked ? 15 : 13, dim: tab.asleep)
                         .frame(width: stacked ? 15 : 13, height: stacked ? 15 : 13)
+                        // Down to its mark, the half has only the mark to
+                        // click, and a click on it names the page as the
+                        // rest of a half does.
+                        .modifier(AddressClick(armed: focused && interactive && !narrow && prefs.clickRenamesTab) { browser.beginTabEdit(tab) })
                 }
                 if tab.shy {
                     Image(systemName: "eye.slash")

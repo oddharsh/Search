@@ -413,6 +413,12 @@ final class Preferences: ObservableObject {
     @Published var pinsGoHome: Bool {
         didSet { store.set(pinsGoHome, forKey: "pins.home") }
     }
+    /// A click on the tab you're on names it, and its site's mark edits the
+    /// address (Browser.beginTabClick, AddressClick). Off, a click on it
+    /// edits the address, as upstream has it. Off unless asked for.
+    @Published var clickRenamesTab: Bool {
+        didSet { store.set(clickRenamesTab, forKey: "tabs.clickRenames") }
+    }
     /// Whether the pinned rows are drawn as rows: asked for, and with the
     /// tabs down the side. Across the top every pin is a square.
     var showsPinRows: Bool { listsPins && sidebar }
@@ -572,6 +578,7 @@ final class Preferences: ObservableObject {
         listsPins = store.bool(forKey: "pins.list")
         pinsGoHome = store.bool(forKey: "pins.home")
         sharesPins = store.bool(forKey: "pins.shared")
+        clickRenamesTab = store.bool(forKey: "tabs.clickRenames")
         splitView = store.bool(forKey: "splitView")
         ai = AI.shipped && store.bool(forKey: "ai")
         aiProvider = store.string(forKey: "ai.provider").flatMap(AIProvider.init(rawValue:))
