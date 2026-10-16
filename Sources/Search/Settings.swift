@@ -485,6 +485,10 @@ struct SettingsPanel: View {
                 Line("Pins in every space", "Keep a pin in every space: right-click it and choose Keep in Every Space. Each space signs in to it the way that space does.") {
                     Switch(on: $prefs.sharesPins)
                 }
+                Rule()
+                Line("Every space in the tab switcher", "A row for each space in ⌃Tab, its latest tabs under its name. ⌃↑ and ⌃↓ move between them.") {
+                    Switch(on: $prefs.switcherSpaceRows)
+                }
             }
             Rule()
             Line("Tab groups", "Named sections in the sidebar. Right-click a tab to start a group; click its heading to hide or show its tabs.") {
