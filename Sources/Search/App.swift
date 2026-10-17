@@ -1102,7 +1102,7 @@ struct ContentView: View {
             browser.prefs.sidebar && browser.prefs.sidePosition == .right
                 ? window.frame.width - (edges.side ?? browser.prefs.sideWidth) + Lights.centre.x
                 : Lights.centre.x
-        }, moved: { measureLights() }, fullScreen: {
+        }, moved: { measureLights() }, fullScreen: { window in
             Fold.fullScreen(window, column: browser.prefs.sidebar && browser.prefs.fullScreenLights)
         })
         DispatchQueue.main.async { measureLights() }

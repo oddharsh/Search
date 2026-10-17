@@ -23,12 +23,13 @@ final class Lights: NSObject {
     private static var kept: [ObjectIdentifier: Lights] = [:]
 
     /// Starts looking after a window's lights, once. `moved` hears each time
-    /// they have been put in place. Neither may hold the window: it is
-    /// handed to `centreX`, so that a window closed for good is freed.
+    /// they have been put in place. None may hold the window: it is
+    /// handed to `centreX` and `fullScreen`, so that a window closed for
+    /// good is freed.
     /// `fullScreen` hears each time AppKit lays the title bar out in full
     /// screen, where the buttons are left where it puts them.
     static func keep(_ window: NSWindow, centreX: @escaping (NSWindow) -> CGFloat, moved: @escaping () -> Void,
-                     fullScreen: @escaping () -> Void) {
+                     fullScreen: @escaping (NSWindow) -> Void) {
         // A freed window's entry goes, and with it the one a new window at
         // the same address would otherwise be taken for.
         kept = kept.filter { $0.value.window != nil }
@@ -50,7 +51,7 @@ final class Lights: NSObject {
 
     private weak var window: NSWindow?
     private let moved: () -> Void
-    private let fullScreen: () -> Void
+    private let fullScreen: (NSWindow) -> Void
     private let centreX: (NSWindow) -> CGFloat
     private var placing = false
     /// AppKit's own spacing between the three, read once from its first
@@ -62,7 +63,7 @@ final class Lights: NSObject {
     private let spacing: CGFloat
 
     private init(_ window: NSWindow, centreX: @escaping (NSWindow) -> CGFloat, moved: @escaping () -> Void,
-                 fullScreen: @escaping () -> Void) {
+                 fullScreen: @escaping (NSWindow) -> Void) {
         self.window = window
         self.centreX = centreX
         self.moved = moved
@@ -120,7 +121,7 @@ final class Lights: NSObject {
         // after saying full screen has begun, though, and shows all of it
         // again on the way, so what is shown of it is settled here.
         if window.styleMask.contains(.fullScreen) {
-            fullScreen()
+            fullScreen(window)
             return
         }
         let buttons = self.buttons
