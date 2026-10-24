@@ -76,7 +76,7 @@ enum SleepPace: String, CaseIterable, Identifiable {
 extension Browser {
     /// How long a tab has to go without being looked at: the chosen pace's
     /// wait, no longer than Sooner's in Low Power Mode when the switch for it
-    /// is on, or `sleep.after` in seconds — for the bench and the measurements.
+    /// is on, or `sleep.after` in seconds, for the bench and the measurements.
     static var sleepAfter: TimeInterval {
         let set = Store.settings.double(forKey: "sleep.after")
         if set > 0 { return set }
