@@ -289,7 +289,11 @@ extension Browser {
         if !makingSpace { spaceStep = to > (spaces.firstIndex { $0.id == spaceID } ?? 0) ? 1 : -1 }
         cancelTabEdit()
         if floater.showing { land() }
-        writeSession(now: true)
+        // In the background: Disk keeps the writes in order, a read of the
+        // row waits for its write (Session.read), and quitting writes the
+        // row on screen at once. Written here on the main thread, it was
+        // half of what a switch spent (2 ms of 4.3, forty tabs).
+        writeSession()
         for tab in tabs where visibleTabIDs.contains(tab.id) { tab.touch() }
         // The row swaps before `activeID` changes, so the switcher never sees
         // this tab being left: with every space in it, it is told here, for
