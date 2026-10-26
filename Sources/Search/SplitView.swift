@@ -138,7 +138,7 @@ private struct PaneLayers: View {
         .animation(Motion.quick, value: browser.paneQuestions.map(\.id))
         .overlay {
             // Over the page the link is on, focused or not.
-            if browser.prefs.showsLinks {
+            if browser.prefs.showsLinks, !(browser.editing && focused) {
                 LinkBubble(status: browser.linkStatus, page: paired ? tab.built : nil)
             }
         }
@@ -230,8 +230,8 @@ private struct OpenTabs: View {
                 .padding(.horizontal, 12)
                 .frame(width: min(Metrics.fieldWidth, max(0, geo.size.width - 28)), alignment: .leading)
                 .frame(maxWidth: .infinity)
-                // Under the field, which stands 60 points above the middle.
-                .offset(y: geo.size.height / 2 + 10)
+                // Under the field, wherever the field stands.
+                .offset(y: Omnibox.top(in: geo.size.height) + Omnibox.fieldHeight + 14)
             }
         }
     }

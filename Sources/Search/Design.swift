@@ -192,7 +192,7 @@ enum Metrics {
     /// The square at the end of the row that opens a new page.
     static let plusWidth: CGFloat = 30
     /// The address field, in both the places it shows up.
-    static let fieldWidth: CGFloat = 560
+    static let fieldWidth: CGFloat = 640
     /// The column of titles down the left, in the way that has one.
     static let side: CGFloat = 232
     static let sideMin: CGFloat = 176

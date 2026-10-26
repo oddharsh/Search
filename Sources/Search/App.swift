@@ -547,7 +547,10 @@ struct ContentView: View {
         } else if let tab = browser.active {
             Page(tab: tab, corner: cards ? Metrics.cardRadius : 0, browser: browser)
                 .overlay {
-                    if browser.prefs.showsLinks { LinkBubble(status: browser.linkStatus) }
+                    // Not under a field raised over the page: with the page
+                    // left undimmed, a link the pointer rests on showed
+                    // through beside it.
+                    if browser.prefs.showsLinks, !browser.editing { LinkBubble(status: browser.linkStatus) }
                 }
                 .overlay(alignment: .topTrailing) {
                     if browser.finding {
@@ -721,8 +724,7 @@ struct ContentView: View {
         if !browser.prefs.splitView {
             Omnibox(browser: browser, over: !(browser.active?.isBlank ?? true))
                 // Centred on the page, not on the window. The column of tabs
-                // is not what the field is standing over, and dimming it along
-                // with the page says otherwise.
+                // is not what the field is standing over, and stays in reach.
                 .padding(.leading, sidebar && !sideOnRight ? browser.prefs.columnWidth : 0)
                 .padding(.trailing, sidebar && sideOnRight ? browser.prefs.columnWidth : 0)
         }
@@ -811,10 +813,6 @@ struct ContentView: View {
                 if let job = browser.fileImport { ImportProgress(browser: browser, job: job) }
             }
             .environment(\.tabShortcutNumbers, browser.tabShortcutNumbers)
-            // The field comes on its spring, and goes quickly: once Return
-            // is pressed the page is on its way, and the field is not what
-            // there is to watch.
-            .animation(browser.fieldShowing ? Motion.settle : Motion.quick, value: browser.fieldShowing)
             .background(windowSetup)
             .onChange(of: browser.prefs.sidebar) { _, _ in
                 DispatchQueue.main.async { Lights.refresh(window); measureLights() }
