@@ -609,6 +609,12 @@ final class Preferences: ObservableObject {
     /// adds a command, so there is no switch. Still a property, for the
     /// code that asks and the tests that turn it off; never written.
     @Published var pinNumberGoesBack = true
+    /// A click on the tab you're on names it, and its site's mark edits the
+    /// address (Browser.beginTabClick, AddressClick). Off, a click on it
+    /// edits the address, as upstream has it. Off unless asked for.
+    @Published var clickRenamesTab: Bool {
+        didSet { store.set(clickRenamesTab, forKey: "tabs.clickRenames") }
+    }
     /// Whether the pinned rows are drawn as rows: asked for, and with the
     /// tabs down the side. Across the top every pin is a square.
     var showsPinRows: Bool { listsPins && sidebar }
@@ -813,6 +819,7 @@ final class Preferences: ObservableObject {
         let peek = store.object(forKey: "pins.peek") as? Bool
         let keepsSite = home == nil && peek == nil ? true : (home ?? false) || (peek ?? false)
         pinsGoHome = keepsSite
+        clickRenamesTab = store.bool(forKey: "tabs.clickRenames")
         ai = AI.shipped && store.bool(forKey: "ai")
         aiProvider = store.string(forKey: "ai.provider").flatMap(AIProvider.init(rawValue:))
         aiModels = store.dictionary(forKey: "ai.models") as? [String: String] ?? [:]

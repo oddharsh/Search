@@ -1112,6 +1112,7 @@ private struct SideRow: View {
                     // title either way, as Settings says (#919).
                     if !tab.isBlank {
                         Mark(icon: prefs.glyph == .icons ? tab.icon : nil, letter: tab.monogram, size: prefs.roomyTabs ? 17 : 15)
+                            .modifier(AddressClick(armed: live && interactive && prefs.clickRenamesTab) { browser.beginTabEdit(tab) })
                     }
                     if tab.bench {
                         // A script's tab, not yours.
@@ -1237,7 +1238,7 @@ private struct SideRow: View {
         .modifier(OneClick(double: false) {
             guard interactive, !selectedOnPress, NSEvent.modifierFlags.intersection([.command, .shift]).isEmpty else { return }
             browser.clearTabSelection()
-            if live { browser.beginTabEdit(tab) } else { browser.select(tab) }
+            if live { browser.beginTabClick(tab) } else { browser.select(tab) }
         })
         .modifier(ModifiedTabClick { if interactive && !editing { browser.extendTabSelection(to: tab, modifiers: $0) } })
         .overlay { if interactive { MiddleClick(act: close) } }
