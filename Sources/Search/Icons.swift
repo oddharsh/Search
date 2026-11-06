@@ -331,7 +331,10 @@ final class Favicons {
             let page = Favicons.page(url)
             let own = Favicons.site(url).flatMap { (tab.shy ? shyPages[$0]?[page] : nil) ?? pages[$0]?[page] }
             tab.icon = cached(for: url, shy: tab.shy) ?? own.flatMap { image($0, dark: !Favicons.dark) }
-            fetch(for: tab)
+            // A page still on its way is asked when it finishes loading:
+            // asked now, it answers from the document before it, or from
+            // nothing yet, and is set down as having no icon.
+            if !tab.loading { fetch(for: tab) }
         }
     }
 
