@@ -37,7 +37,7 @@ struct SettingsPanel: View {
     @MainActor static var arcBefore: Preferences.ArcSetup?
 
     enum Page: String, CaseIterable, Identifiable {
-        case general, appearance, tabs, browsing, spaces, passwords, privacy, ai, extensions, keyboard, about
+        case general, appearance, tabs, browsing, spaces, passwords, privacy, ai, extensions, keyboard, flags, about
         var id: String { rawValue }
         var title: String {
             switch self {
@@ -51,6 +51,7 @@ struct SettingsPanel: View {
             case .ai: return "AI"
             case .extensions: return "Extensions"
             case .keyboard: return "Keyboard & Mouse"
+            case .flags: return "Flags"
             case .about: return "About"
             }
         }
@@ -66,6 +67,7 @@ struct SettingsPanel: View {
             case .ai: return "sparkles"
             case .extensions: return "puzzlepiece.extension"
             case .keyboard: return "keyboard"
+            case .flags: return "flag"
             case .about: return "info.circle"
             }
         }
@@ -80,10 +82,12 @@ struct SettingsPanel: View {
             }
         }
         /// The rail's three blocks: the browser, your data and tools, About.
+        /// Flags sits over About only in a stack build, which has something
+        /// to list there.
         static var blocks: [[Page]] {
             [[.general, .appearance, .tabs, .browsing, .spaces],
              [.passwords, .privacy] + (AI.shipped ? [.ai] : []) + [.extensions, .keyboard],
-             [.about]]
+             (Stack.features.isEmpty ? [] : [.flags]) + [.about]]
         }
     }
 
@@ -334,6 +338,8 @@ struct SettingsPanel: View {
             ExtensionsPage(browser: browser)
         case .ai:
             if AI.shipped { AISettings(browser: browser, prefs: prefs) }
+        case .flags:
+            FlagsPage(prefs: prefs) { self.page = $0 }
         default:
             groups(of: page)
         }
