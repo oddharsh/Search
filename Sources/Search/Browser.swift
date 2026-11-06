@@ -3523,11 +3523,7 @@ final class Browser: NSObject, ObservableObject {
         // Spotlight's does. What was typed waits for the next ⌘T (see
         // dismiss()). It used to stay up with what was typed cleared.
         if launching { putAway(); return }
-        guard prefs.floatingNewTab, let tab = active, !tab.isBlank, peekTab == nil else {
-            newTab()
-            return
-        }
-        if #available(macOS 15.4, *), Extensions.shared.newTabPage != nil || (!tab.shy && Extensions.shared.newTabUnaskedAsker != nil) {
+        guard floats else {
             newTab()
             return
         }
@@ -3582,6 +3578,16 @@ final class Browser: NSObject, ObservableObject {
         guard active?.isBlank == false else { return }
         editing = false
         typed = ""
+    }
+
+    /// Whether ⌘T would raise the floating field rather than open a tab (see
+    /// launch).
+    private var floats: Bool {
+        guard prefs.floatingNewTab, let tab = active, !tab.isBlank, peekTab == nil else { return false }
+        if #available(macOS 15.4, *), Extensions.shared.newTabPage != nil || (!tab.shy && Extensions.shared.newTabUnaskedAsker != nil) {
+            return false
+        }
+        return true
     }
 
     func newTab() {
@@ -6247,7 +6253,13 @@ final class Browser: NSObject, ObservableObject {
 
     // MARK: - the address field
 
-    /// ⌘L. The current address comes up selected, so typing over it replaces it
+    /// ⌘L. With Prefs.commandLLaunches on, ⌘T's field wherever ⌘T would float
+    /// it (see floats), as in Arc; anywhere else, the field for this tab.
+    func openAddress() {
+        prefs.commandLLaunches && floats ? launch() : edit()
+    }
+
+    /// The current address comes up selected, so typing over it replaces it
     /// and Escape puts it back.
     func edit() {
         // Again while it is up over the page: put away, as Escape would.

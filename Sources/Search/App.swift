@@ -71,7 +71,7 @@ struct SearchApp: App {
                     .shortcut("file.reopen")
                     .disabled(browser.ghosts.isEmpty && Browsers.lastClosedAt == nil)
                 Divider()
-                Button("Open Address…") { browser.edit() }
+                Button("Open Address…") { browser.openAddress() }
                     .shortcut("file.openAddress")
                 Divider()
                 // Another browser's bookmarks, history, passwords and the
@@ -1654,7 +1654,7 @@ struct ContentView: View {
         case "w" where shifted:
             browser.closeWindow()
         case "l" where !shifted:
-            browser.edit()
+            browser.openAddress()
         case "r" where !shifted:
             browser.reload()
         case "r" where shifted:
