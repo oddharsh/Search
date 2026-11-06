@@ -45,6 +45,13 @@ in [ROADMAP.md](ROADMAP.md).
 - The key that raised the address field puts it away: ⌘T again closes ⌘T's floating field, ⌘L again closes ⌘L's, and ⌘K pressed afresh closes the switcher, as Spotlight's key does. ⌘K held still steps down the list. ⌘T again used to leave the field up with what was typed cleared, ⌘L again put the address back over an edit, and ⌘K, let go, ⌘K switched to the second tab in the list. What was typed is kept: switching between ⌘T, ⌘L and ⌘K changes only where Return goes, and a ⌘T put away without opening anything comes back with its words, selected. Thanks [@ubeann](https://github.com/ubeann) ([#912](https://github.com/driceroland/Search/pull/912))
 - The downloads button gives one quick pulse each time a new download starts, so a file that comes in fast still shows it began. A button just coming in has its usual scale-in instead, a resume or a retry doesn't pulse, and with Reduce Motion it holds still. Asked for by [@pasteley](https://github.com/pasteley) ([#830](https://github.com/driceroland/Search/issues/830))
 - A search's results page you have been to reads as the search it was in the address field's list, "naruto vs one piece" with Reddit beside it and the mark of a past search, instead of its address (reddit.com/search/?q=naruto%20vs%20one%20piece). It still opens that page, and an address being typed still finishes in grey as before. Your engine's page for exactly what you typed isn't shown twice. Thanks [@ubeann](https://github.com/ubeann) ([#880](https://github.com/driceroland/Search/issues/880), [#889](https://github.com/driceroland/Search/pull/889))
+- With the tabs in the sidebar, back, forward and reload sit a little further from the window's red, yellow and green buttons, as a toolbar's first button does in Safari; a narrow column keeps them where they were
+
+### Fixed
+
+- Reading mode keeps a list's numbers and bullets on sites whose styles take them off, as Tailwind's reset does for every list on the page.
+- New small windows open a step down and to the right of the newest one on screen instead of exactly on top of it. Five links from Mail were five windows that looked like one, the others hidden under it. Thanks [@oddharsh](https://github.com/oddharsh) ([#493](https://github.com/driceroland/Search/pull/493))
+- Dragging a tab or a pin in the column moves it under the hand again. In 1.0.6, since a tab opens as the button goes down ([#625](https://github.com/driceroland/Search/pull/625)), it only jumped into place on letting go, and a pin held still a moment before letting go wasn't moved at all
 
 ### Held back
 
