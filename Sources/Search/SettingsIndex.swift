@@ -262,6 +262,10 @@ enum SettingsIndex {
               title: "Spaces", detail: "Separate sets of tabs, switched with ⌃1–⌃9 or a swipe",
               more: "Each space can be signed in where the others are or start afresh. Mission Control's own ⌃1–⌃9, if you turned them on, take those keys first.",
               keys: ["spaces"], words: ["workspaces", "profiles"]),
+        .init(id: "switcher.spaces", group: "spaces", icon: "rectangle.stack",
+              title: "Every space in the tab switcher", detail: "A row for each space in ⌃Tab, its latest tabs under its name",
+              more: "⌃↑ and ⌃↓ move between the rows.",
+              keys: ["switcher.spaces"], words: ["ctrl tab", "switcher", "rows"], parent: "spaces"),
         .init(id: "profiles", group: "spaces", icon: "person.2",
               title: "Profiles", detail: "Spaces with their own sign-ins, history and bookmarks",
               more: "In windows of their own, unless Profiles in one window is on. Extensions, passwords and settings are shared.",
@@ -445,6 +449,7 @@ enum SettingsIndex {
         case "sidebar.hides", "layout.cards", "pins.list": return prefs.sidebar
         case "toolbar.left": return !prefs.sidebar
         case "profiles.oneWindow": return Profiles.shared.several
+        case "switcher.spaces": return prefs.usesSpaces
         default: return true
         }
     }
@@ -456,6 +461,7 @@ enum SettingsIndex {
         case "toolbar.left": return "Only with the tabs across the top"
         case "sidebar.roomy": return "Only with titles in the column"
         case "profiles.oneWindow": return "Only with more than one profile"
+        case "switcher.spaces": return "Only with Spaces on"
         default: return "Only with the tabs down a side"
         }
     }
