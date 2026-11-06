@@ -23,6 +23,17 @@ struct Omnibox: View {
     /// The page whose pane this field stands on, with Split View on.
     var tab: Tab.ID?
 
+    /// What is typed and offered, which the Browser doesn't announce.
+    @ObservedObject private var typing: Typing
+
+    init(browser: Browser, over: Bool, fitted: Bool = false, tab: Tab.ID? = nil) {
+        self.browser = browser
+        self.over = over
+        self.fitted = fitted
+        self.tab = tab
+        typing = browser.typing
+    }
+
     var body: some View {
         Group {
             if fitted {
@@ -91,7 +102,7 @@ struct Omnibox: View {
                 SiteChip(site: site)
                     .transition(.scale(scale: 0.9, anchor: .leading).combined(with: .opacity))
             }
-            AddressField(browser: browser, tab: tab)
+            AddressField(browser: browser, tab: tab, typing: typing)
         }
             .animation(Motion.quick, value: browser.siteChip)
             .frame(height: 22)
@@ -499,6 +510,9 @@ struct AddressField: NSViewRepresentable {
     @ObservedObject var browser: Browser
     /// The pane's page, for a field standing on one (see Coordinator.focus).
     var tab: Tab.ID?
+    /// What it holds and completes to: an arrow key walking the list
+    /// changes what the field shows.
+    @ObservedObject var typing: Typing
 
     func makeCoordinator() -> Coordinator { Coordinator(browser: browser) }
 
