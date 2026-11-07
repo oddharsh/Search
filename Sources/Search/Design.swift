@@ -290,6 +290,25 @@ enum Motion {
     }
 }
 
+// Three taps through the trackpad, each with one meaning, so a hand learns
+// them once: a line crossed or a place found, letting go now doing
+// something, and an end that goes no further. They play only under fingers
+// on a Force Touch trackpad, which is why they sit on drags and gestures and
+// nowhere else; the Mac's own setting for haptic feedback turns them off.
+enum Feel {
+    /// Lined up: the divider at even, a tab taking its next place, a row
+    /// stepped to, a gesture let off before it went.
+    static func line() { tap(.alignment) }
+    /// Let go now and it happens: the page going back, the next space.
+    static func armed() { tap(.levelChange) }
+    /// As far as it goes.
+    static func end() { tap(.generic) }
+
+    private static func tap(_ pattern: NSHapticFeedbackManager.FeedbackPattern) {
+        NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .now)
+    }
+}
+
 /// Search's mark — Drice's Subtract.svg, a pill with an S cut out of it,
 /// read from its own path data rather than loaded from a file, so it stays a
 /// crisp vector at any size. No plate, no square behind it: the mark draws exactly

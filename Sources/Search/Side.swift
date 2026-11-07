@@ -21,6 +21,10 @@ struct SideBar: View {
     /// The width the column had when the edge was picked up.
     @State private var grabbed: CGFloat?
     @State private var onEdge = false
+    /// Held at the column's own width on the way past it.
+    @State private var atDefault = false
+    /// Pulled as wide or as narrow as it goes.
+    @State private var atEnd = false
 
     /// A pin, picked up out of the grid — a separate state from the loose
     /// rows above, since the two gestures never happen at once but move on
@@ -166,6 +170,13 @@ struct SideBar: View {
         .animation(Motion.settle, value: browser.listedPins.count)
     }
 
+    /// How close to its own width the edge has to come to settle there, and
+    /// how far past it the pointer goes before it lets go: a narrower catch
+    /// than the split divider's, since a column a few points off its own
+    /// width is a width someone wanted.
+    static let snap: CGFloat = 6
+    static let unsnap: CGFloat = 10
+
     /// The column's edge: pull it to make the column wider or narrower,
     /// double-click it to put it back. The whole edge takes the pointer; on
     /// it, a small pill shows in the middle (see Grip) so the edge says it
@@ -184,10 +195,28 @@ struct SideBar: View {
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .global)
                     .onChanged { value in
-                        if grabbed == nil { grabbed = prefs.sideWidth }
+                        if grabbed == nil {
+                            grabbed = prefs.sideWidth
+                            atDefault = prefs.sideWidth == Metrics.side
+                            atEnd = false
+                        }
                         let delta = onRight ? -value.translation.width : value.translation.width
-                        let wanted = (grabbed ?? prefs.sideWidth) + delta
-                        prefs.sideWidth = min(Metrics.sideMax, max(Metrics.sideMin, wanted))
+                        var wanted = (grabbed ?? prefs.sideWidth) + delta
+                        // The width a double-click puts back holds the edge
+                        // a moment on the way past, as the split's divider
+                        // holds at even, with a tap to say it's there.
+                        if atDefault {
+                            if abs(wanted - Metrics.side) > SideBar.unsnap { atDefault = false } else { wanted = Metrics.side }
+                        } else if abs(wanted - Metrics.side) <= SideBar.snap {
+                            atDefault = true
+                            wanted = Metrics.side
+                            Feel.line()
+                        }
+                        let width = min(Metrics.sideMax, max(Metrics.sideMin, wanted))
+                        let end = width != wanted
+                        if end, !atEnd { Feel.end() }
+                        atEnd = end
+                        prefs.sideWidth = width
                     }
                     .onEnded { _ in grabbed = nil }
             )
@@ -812,9 +841,7 @@ struct SideBar: View {
         let now = target(for: tab, at: columnPoint(point, from: from))
             .map { PinDrop.Crossing(tab: tab.id, target: $0) }
         if now != crossing {
-            if crossing == nil, now != nil {
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-            }
+            if crossing == nil, now != nil { Feel.line() }
             withAnimation(Motion.settle) { crossing = now }
         }
         return now != nil

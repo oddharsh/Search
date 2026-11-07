@@ -39,6 +39,7 @@ in [ROADMAP.md](ROADMAP.md).
 
 ### Added
 
+- More taps under the fingers on a Force Touch trackpad. Swiping between spaces taps once you've gone far enough that letting go brings the next one, and lighter if you come back short of it, as the swipe back through a page's history does. A tab carried along the column or the top taps at each place it takes. The column's edge holds a moment at its own width on the way past, with a tap, and taps again at its narrowest and widest. The Mac's own haptic feedback setting turns them all off.
 - Copy Address in a download's right-click menu, while it runs and once it is done, for files downloaded from now on, to hand it to another download app. Clearing history takes these addresses with it; the files stay listed. Asked for by [@ejzpan](https://github.com/ejzpan) ([#853](https://github.com/driceroland/Search/issues/853))
 - With a site put in the address field with Tab, the list offers what you searched that site for before, newest first, read from your history on this Mac and sent nowhere; the last few show before you type, and none in a private tab. A site shortcut ("yt naruto") offers the same. With Google in the field and Google your search engine, Suggestions from your search engine shows its suggestions there too; words typed to any other site never go to your engine. Thanks [@ubeann](https://github.com/ubeann) ([#880](https://github.com/driceroland/Search/issues/880), [#882](https://github.com/driceroland/Search/pull/882))
 

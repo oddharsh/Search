@@ -1045,6 +1045,9 @@ struct Carried: ViewModifier {
                         if target != index {
                             reordered = true
                             withAnimation(Motion.settle) { move(target) }
+                            // A tap for each place it takes, so the count
+                            // of places passed is in the hand.
+                            Feel.line()
                         }
                     }
                     .onEnded { value in
