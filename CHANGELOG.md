@@ -11,6 +11,10 @@ in [ROADMAP.md](ROADMAP.md).
 
 ## Unreleased
 
+### Added
+
+- The page under the address field raised over it (⌘L, ⌘T's floating field, ⌘K) can be set back as it is under a peek, the same grey in light and dark. Off unless you turn it on in Settings › Appearance › Window; off, the page fades toward white in light and a dark grey in dark, as before. ([#977](https://github.com/driceroland/Search/pull/977))
+
 ### Held back
 
 Not in this version, kept on main for a later one:

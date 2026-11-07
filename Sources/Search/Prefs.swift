@@ -253,6 +253,11 @@ final class Preferences: ObservableObject {
     @Published var cardsInFullScreen: Bool {
         didSet { store.set(cardsInFullScreen, forKey: "layout.cardsFullScreen") }
     }
+    /// The page under the address field raised over it is set back as under
+    /// a peek (#977). Off, it fades toward the window's ground, as before.
+    @Published var fieldDims: Bool {
+        didSet { store.set(fieldDims, forKey: "field.dim") }
+    }
     @Published var glyph: Glyph {
         didSet { store.set(glyph.rawValue, forKey: "glyph") }
     }
@@ -951,6 +956,7 @@ final class Preferences: ObservableObject {
         sideWidth = min(Metrics.sideMax, max(Metrics.sideMin, CGFloat(width)))
         cards = store.object(forKey: "layout.cards") as? Bool ?? true
         cardsInFullScreen = store.bool(forKey: "layout.cardsFullScreen")
+        fieldDims = store.bool(forKey: "field.dim")
         glyph = store.string(forKey: "glyph").flatMap(Glyph.init) ?? .letters
         engine = store.string(forKey: "search.engine").flatMap(Engine.init) ?? .standard
         customEngine = store.string(forKey: "search.custom") ?? ""
@@ -1191,6 +1197,7 @@ final class Preferences: ObservableObject {
             .flatMap { Preferences.sidePanelWidths.contains($0) ? $0 : nil }, or: 380)
         take(\.cards, "layout.cards", store.object(forKey: "layout.cards") as? Bool, or: true)
         take(\.cardsInFullScreen, store.bool(forKey: "layout.cardsFullScreen"))
+        take(\.fieldDims, store.bool(forKey: "field.dim"))
         take(\.glyph, "glyph", store.string(forKey: "glyph").flatMap(Glyph.init), or: .letters)
         take(\.tabsGive, store.bool(forKey: "tabs.give"))
         take(\.instantMotion, store.bool(forKey: Motion.instantKey))

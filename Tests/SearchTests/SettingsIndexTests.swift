@@ -14,7 +14,7 @@ final class SettingsIndexTests: XCTestCase {
     private let touched = ["sidebar", "sidebar.position", "tabs.sleep", SleepPace.key, "float.leave", "float.away",
                            "pins.home", "pins.peek", "links.peek", "links.peekClick", "pages.120", "pages.120.mode",
                            "swipe.history", "tabs.address", "links.show", "float.flicks", "spaces", "pins.list",
-                           "newtab.floating", "search.shift", "search.shiftCustom"]
+                           "newtab.floating", "search.shift", "search.shiftCustom", "field.dim"]
 
     private func fresh(_ body: () -> Void) {
         let saved = touched.map { ($0, Store.settings.object(forKey: $0)) }
@@ -48,6 +48,7 @@ final class SettingsIndexTests: XCTestCase {
             XCTAssertEqual(prefs.sleepChoice, .normal)
             XCTAssertEqual(prefs.floatOwn, .tabs)
             XCTAssertEqual(prefs.peekChoice, .shift)
+            XCTAssertFalse(prefs.fieldDims, "The page under the field fades as it always has (#977)")
             // Nothing written just for reading them.
             for key in ["pins.home", "pins.peek", "pages.120.mode", "swipe.history", "tabs.address"] {
                 XCTAssertNil(Store.settings.object(forKey: key), key)
@@ -74,6 +75,8 @@ final class SettingsIndexTests: XCTestCase {
             XCTAssertTrue(Preferences().pinsKeepSite, "either on: on")
             Store.settings.set(true, forKey: "pages.120")
             XCTAssertEqual(Preferences().fastPages, .always)
+            Store.settings.set(true, forKey: "field.dim")
+            XCTAssertTrue(Preferences().fieldDims)
         }
     }
 
