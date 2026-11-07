@@ -480,6 +480,13 @@ final class Preferences: ObservableObject {
             PageView.holdsHistory = holdsHistory
         }
     }
+    /// More taps under the fingers (see Feel.more). Off unless asked for.
+    @Published var tapsMore: Bool {
+        didSet {
+            store.set(tapsMore, forKey: "feel.more")
+            Feel.more = tapsMore
+        }
+    }
     /// Two fingers flick the floating video to a corner (see Float.swift).
     /// On unless turned off.
     @Published var floatFlicks: Bool {
@@ -786,6 +793,9 @@ final class Preferences: ObservableObject {
         let history = store.object(forKey: "swipe.history") as? Bool ?? true
         holdsHistory = history
         PageView.holdsHistory = history
+        let more = store.bool(forKey: "feel.more")
+        tapsMore = more
+        Feel.more = more
         // On for everyone who never touched these three switches (Drice,
         // 27 Sep 2026); a choice made before stands.
         let flicks = store.object(forKey: "float.flicks") as? Bool ?? true

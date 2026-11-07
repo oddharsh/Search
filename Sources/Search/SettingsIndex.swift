@@ -349,6 +349,10 @@ enum SettingsIndex {
               title: "Hold a swipe to pick from history", detail: "Keep your fingers down after a swipe back to pick a page",
               more: "Swipe back or forward and keep your fingers down: the pages that way appear, and moving up or down picks one.",
               keys: ["swipe.history"], words: ["gesture", "trackpad", "back"]),
+        .init(id: "feel.more", group: "mouse", icon: "hand.tap",
+              title: "Taps from the trackpad", detail: "Felt when letting go of a swipe or a drag would change something",
+              more: "Swiping between spaces taps once letting go brings the next one. A carried tab taps at each place it takes. The column's edge holds a moment at its own width, with a tap.",
+              keys: ["feel.more"], words: ["haptics", "force touch", "feedback", "gesture"]),
 
         // About
         .init(id: "updates.version", group: "updates", icon: "arrow.down.app",

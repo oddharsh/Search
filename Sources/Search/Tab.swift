@@ -2886,9 +2886,7 @@ final class PageView: WKWebView {
             // Two different taps: one for reaching it, a lighter one for
             // stepping back from it, so you know without looking that
             // letting go now is safe.
-            NSHapticFeedbackManager.defaultPerformer.perform(
-                armed ? .levelChange : .alignment, performanceTime: .now
-            )
+            if armed { Feel.armed() } else { Feel.line() }
         }
         armedNow = armed
         settle(Pull(back: back, travel: travel, armed: armed, going: false, stops: stops, picked: picked, leaves: leaves))
@@ -2905,7 +2903,7 @@ final class PageView: WKWebView {
         stops = list.map { Stop(title: $0.title ?? "", url: $0.url) }
         picked = back ? list.count - 1 : 0
         climbed = 0
-        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        Feel.armed()
         tell()
     }
 
@@ -2931,7 +2929,7 @@ final class PageView: WKWebView {
         }
         // At either end, the fingers going on further count for nothing.
         climbed = max(-PageView.step, min(PageView.step, climbed))
-        if moved { NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now) }
+        if moved { Feel.line() }
     }
 
     private func release() {

@@ -176,7 +176,7 @@ final class TabDrag: ObservableObject {
             return true
         }
         preview = wanted
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        Feel.line()
         return true
     }
 
@@ -203,7 +203,7 @@ final class TabDrag: ObservableObject {
             return
         }
         showSeparation((half.id, place?.id))
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        Feel.line()
     }
 
     private func showSeparation(_ shown: (leaving: Tab.ID, before: Tab.ID?)?) {

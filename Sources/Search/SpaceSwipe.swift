@@ -34,6 +34,8 @@ final class SpaceSwipe {
     private var resting = Date.distantPast
     /// A gesture let go by while resting, kept whole, glide included.
     private var ignoring = false
+    /// Far enough that letting go brings the next space, as last felt.
+    private var armed = false
 
     /// How long after a space comes before another can.
     static let rest: TimeInterval = 0.4
@@ -212,6 +214,7 @@ final class SpaceSwipe {
         // Just after a space came: the same hand's next stroke is let go by.
         ignoring = Date() <= resting
         tracking = !ignoring
+        armed = false
     }
 
     /// True while the gesture is this one's to take. The spaces lie
@@ -228,6 +231,13 @@ final class SpaceSwipe {
         }
         guard axis == .across else { return false }
         browser.spaceSwipe = resisted(gathered.width, in: browser)
+        // The same two taps as the swipe back through a page's history: one
+        // for far enough, a lighter one for coming back from it.
+        let far = abs(gathered.width) >= SpaceSwipe.enough(for: browser) && !blocked(gathered.width, in: browser)
+        if Feel.more, far != armed {
+            if far { Feel.armed() } else { Feel.line() }
+            armed = far
+        }
         return true
     }
 
@@ -258,9 +268,12 @@ final class SpaceSwipe {
 
     /// Nothing that way: the rows give a little, and come back.
     private func resisted(_ travel: CGFloat, in browser: Browser) -> CGFloat {
+        blocked(travel, in: browser) ? travel / 4 : travel
+    }
+
+    private func blocked(_ travel: CGFloat, in browser: Browser) -> Bool {
         let here = browser.makingSpace ? browser.spaces.count : (browser.spaces.firstIndex { $0.id == browser.spaceID } ?? 0)
-        let blocked = (travel > 0 && here == 0 && browser.profileBeyond(-1) == nil) || (travel < 0 && here == browser.spaces.count)
-        return blocked ? travel / 4 : travel
+        return (travel > 0 && here == 0 && browser.profileBeyond(-1) == nil) || (travel < 0 && here == browser.spaces.count)
     }
 
     /// The pages carry on the way the fingers went until the next one is

@@ -473,7 +473,7 @@ final class PaneStage: NSView {
         } else if abs(left - even) <= Self.snap {
             snapped = true
             left = even
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            Feel.line()
         }
         let fraction = Double(left / room)
         guard fraction != live else { return }
