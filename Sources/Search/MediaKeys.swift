@@ -95,7 +95,11 @@ final class MediaKeys: NSObject, WKScriptMessageHandler {
       // speaker can't tell. The same videos Isolate.on looks through.
       if (window.top !== window) return;
       var playing = false;
-      function playback() {
+      function playback(e) {
+        // WebKit pausing a silent video as its page goes out of sight is no
+        // stop: it floats all the same (see Isolate.watch), and is read
+        // again once the page can be seen.
+        if (e && e.type === 'pause' && e.isTrusted && document.visibilityState === 'hidden') return;
         var now = false, videos = document.getElementsByTagName('video');
         for (var i = 0; i < videos.length; i++) {
           if (!videos[i].paused && !videos[i].ended) { now = true; break; }
@@ -108,6 +112,9 @@ final class MediaKeys: NSObject, WKScriptMessageHandler {
       ['play', 'playing', 'pause', 'ended', 'emptied'].forEach(function (name) {
         document.addEventListener(name, playback, true);
       });
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') playback();
+      }, true);
       // Back from the back-forward cache, the browser has forgotten: said again.
       window.addEventListener('pageshow', function (e) {
         if (!e.persisted) return;
