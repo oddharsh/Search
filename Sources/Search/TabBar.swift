@@ -18,6 +18,8 @@ struct TabBar: View {
     /// Which tab is under the hand, where it started, and how far it has come.
     @State private var landing = false
     @State private var groupFrames: [UUID: GroupDropFrame] = [:]
+    /// A tab of the run is being carried along it (see Carried).
+    @State private var carrying = false
     /// The plus only comes out when the pointer is in the row.
     @State private var nearby = false
     @State private var plussed = false
@@ -63,7 +65,7 @@ struct TabBar: View {
                     // between them (see SpaceSwipe). Past the last, a new one.
                     SpacePages(
                         travel: browser.spaceTravel, axis: .vertical, span: Metrics.strip, alignment: .leading,
-                        before: spaceAt > 0, after: spaceAt < browser.spaces.count, here: here(in: geo.size.width)
+                        before: spaceAt > 0, after: browser.drawsPage(after: spaceAt), here: here(in: geo.size.width)
                     ) { step in
                         page(spaceAt + step, in: geo.size.width, pill: step < 0 ? above : below)
                     }
@@ -101,7 +103,7 @@ struct TabBar: View {
                     HStack(spacing: Metrics.tabGap) {
                         // Only while a download is running, and a moment after.
                         FetchDoor(browser: browser, fetches: browser.fetches)
-                        ExtensionSlot()
+                        ExtensionSlot(browser: browser)
                         if !browser.prefs.navigationLeft {
                             Helm(browser: browser).padding(.trailing, 8)
                         }
@@ -171,8 +173,9 @@ struct TabBar: View {
                     HStack(spacing: Metrics.tabGap) {
                         if browser.prefs.usesTabGroups {
                             let pins = browser.displayedTabs.filter { $0.pin != nil }
+                            let pinSteps = steps(pins, each: each)
                             ForEach(Array(pins.enumerated()), id: \.element.id) { index, tab in
-                                topTab(tab, index: index, count: pins.count,
+                                topTab(tab, index: index, steps: pinSteps,
                                        group: nil, strip: strip, each: each)
                             }
                             if pinLine { PinLine() }
@@ -180,30 +183,35 @@ struct TabBar: View {
                                 GroupHeading(browser: browser, group: group,
                                              horizontal: true, dragSpace: "strip")
                                 let members = browser.visibleTabs(in: group)
+                                let memberSteps = steps(members, each: each)
                                 ForEach(Array(members.enumerated()), id: \.element.id) { index, tab in
-                                    topTab(tab, index: index, count: members.count,
+                                    topTab(tab, index: index, steps: memberSteps,
                                            group: group.id, strip: strip, each: each)
                                 }
                             }
                             let ungrouped = browser.displayedTabs.filter { $0.pin == nil && browser.group(of: $0) == nil }
+                            let ungroupedSteps = steps(ungrouped, each: each)
                             ForEach(Array(ungrouped.enumerated()), id: \.element.id) { index, tab in
-                                topTab(tab, index: index, count: ungrouped.count,
+                                topTab(tab, index: index, steps: ungroupedSteps,
                                        group: nil, strip: strip, each: each)
                             }
                         } else {
                             // Drawn before the first tab that isn't a pin,
                             // rather than by splitting the run in two: the
-                            // index and the count each tab is given are what
+                            // index and the places each tab is given are what
                             // carrying one along the row works from.
-                            let firstLoose = browser.displayedTabs.firstIndex { $0.pin == nil }
-                            ForEach(Array(browser.displayedTabs.enumerated()), id: \.element.id) { index, tab in
+                            let shown = browser.displayedTabs
+                            let firstLoose = shown.firstIndex { $0.pin == nil }
+                            let shownSteps = steps(shown, each: each)
+                            ForEach(Array(shown.enumerated()), id: \.element.id) { index, tab in
                                 if pinLine, index == firstLoose { PinLine() }
-                                topTab(tab, index: index, count: browser.displayedTabs.count,
+                                topTab(tab, index: index, steps: shownSteps,
                                        group: nil, strip: strip, each: each)
                             }
                         }
                     }
                     .frame(height: Metrics.strip)
+                    .environment(\.rowCarrying, carrying)
                     .onPreferenceChange(GroupDropFrames.self) { groupFrames = $0 }
                 }
                 .scrollDisabled(!overflowing(in: strip))
@@ -301,11 +309,11 @@ struct TabBar: View {
 
     /// `each`: every loose tab's width (see `width(in:)`), worked out once
     /// for the run.
-    private func topTab(_ tab: Tab, index: Int, count: Int, group: UUID?, strip: CGFloat, each: CGFloat) -> some View {
+    /// `steps`: every place in the run the tab is carried along (see
+    /// `steps(_:each:)`), worked out once for the run as `each` is.
+    private func topTab(_ tab: Tab, index: Int, steps: [CGFloat], group: UUID?, strip: CGFloat, each: CGFloat) -> some View {
         let pair = browser.prefs.splitView ? browser.split(for: tab) : nil
         let isPairRepresentative = pair?.left == tab.id
-        let itemWidth = isPairRepresentative ? splitItemWidth(base: each) : each
-        let step = (tab.pin != nil ? Metrics.pinWidth : itemWidth) + Metrics.tabGap
         return rowItem(tab, in: browser.tabs, splits: browser.splits, activeID: browser.activeID,
                        width: each, room: strip - lights - leading - 12,
                        height: Metrics.strip, interactive: true, pill: pill)
@@ -314,10 +322,11 @@ struct TabBar: View {
                     SplitDropZone(browser: browser, tab: tab, kind: .strip)
                 }
             }
-            .modifier(Carried(index: index, count: count, step: step, vertical: false,
+            .modifier(Carried(index: index, steps: steps, vertical: false,
                               space: "strip", onDropTab: { source, point in drop(source, at: point) },
                               groupDestination: { source, point in destination(source, at: point) },
-                              outside: { browser.dragOut(tab) }, browser: browser, tab: tab) {
+                              outside: { browser.dragOut(tab) }, browser: browser, tab: tab,
+                              holding: { carrying = $0 }) {
                 if browser.prefs.usesTabGroups && tab.pin == nil {
                     browser.move(tab, within: group, to: $0)
                 } else {
@@ -325,6 +334,14 @@ struct TabBar: View {
                 }
             })
             .id(tab.id)
+    }
+
+    /// Each place in a run: a pin's width, a pair's or a tab's, and the gap.
+    private func steps(_ run: [Tab], each: CGFloat) -> [CGFloat] {
+        let pairs = browser.prefs.splitView ? Set(browser.splits.filter { $0.left != $0.right }.map(\.left)) : []
+        return run.map { tab in
+            (tab.pin != nil ? Metrics.pinWidth : pairs.contains(tab.id) ? splitItemWidth(base: each) : each) + Metrics.tabGap
+        }
     }
 
     @ViewBuilder
@@ -352,7 +369,7 @@ struct TabBar: View {
         } else {
             TabPill(browser: browser, prefs: browser.prefs, tab: tab,
                     live: tab.id == activeID, width: width, room: room, pill: pill,
-                    close: interactive ? { browser.close(tab) } : {})
+                    close: interactive ? { browser.closeTab(tab) } : {})
         }
     }
 
@@ -618,6 +635,7 @@ enum Rewind {
 
 private struct TabPill: View, Equatable {
     @Environment(\.tabShortcutNumbers) private var shortcutNumbers
+    @Environment(\.rowCarrying) private var rowCarrying
     let browser: Browser
 
     @ObservedObject var prefs: Preferences
@@ -716,7 +734,7 @@ private struct TabPill: View, Equatable {
                 loose
             }
         }
-        .background { ground }
+        .background { ground.animation(Motion.quick, value: rowCarrying) }
         .overlay {
             if selected {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -756,7 +774,7 @@ private struct TabPill: View, Equatable {
         .onHover { hovering = $0 }
         .contextMenu { TabMenu(browser: browser, tab: tab, close: close) }
         .help(pinned || compact ? tab.label : "")
-        .animation(Motion.quick, value: hovering)
+        .animation(nil, value: hovering)
         .animation(Motion.glide, value: editing)
         .animation(Motion.glide, value: tab.pin)
         .onChange(of: refusals) { _, _ in
@@ -808,8 +826,8 @@ private struct TabPill: View, Equatable {
                 TabAddressField(browser: browser)
                     .frame(height: 16)
             } else {
-                if prefs.glyph == .icons, !tab.isBlank {
-                    Mark(icon: tab.icon, letter: tab.monogram, size: 15)
+                if !tab.isBlank {
+                    Mark(icon: prefs.glyph == .icons ? tab.icon : nil, letter: tab.monogram, size: 15)
                 }
                 if tab.bench {
                     // A script's tab, not yours.
@@ -884,7 +902,7 @@ private struct TabPill: View, Equatable {
                             .frame(width: 30, height: 28)
                     }
                 }
-                .animation(Motion.quick, value: hovering)
+                .animation(nil, value: hovering)
                 .animation(Motion.quick, value: tab.loading)
             }
         }
@@ -923,7 +941,7 @@ private struct TabPill: View, Equatable {
         } else if hovering {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Palette.hover)
-        } else if pinned || compact {
+        } else if pinned || compact || rowCarrying {
             // A letter with nothing behind it reads as debris. A pinned tab
             // keeps a faint ground of its own so the block of them reads as
             // one thing, and a tab down to its mark stands in the same place:
@@ -931,6 +949,11 @@ private struct TabPill: View, Equatable {
             // grey says it for the mark. The live, selected and hovered
             // grounds above are unchanged, so a mark wears this one only
             // while it is none of those.
+            //
+            // So does every tab of the run while one is carried along it: a
+            // tab just passed lies half under the one carried, its title at
+            // its left under it too, and the half left showing was nothing,
+            // so it seemed gone until the hand moved on (#898).
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(Palette.wash.opacity(0.55))
         }
@@ -957,9 +980,13 @@ private struct TabPill: View, Equatable {
 /// only redraws when the tab actually changes place.
 struct Carried: ViewModifier {
     let index: Int
-    let count: Int
-    /// One place in the row: the tab's length and the gap after it.
-    let step: CGFloat
+    /// Every place in the row, in its order now: each item's length and the
+    /// gap after it. Not one length for all: a pair is two lines tall down
+    /// the column and wider than a tab across the top, and a tab carried
+    /// past one moves by the pair's length, not its own. Worked out as one
+    /// step for everything, the tab jumped a line away from the hand at each
+    /// pair it passed, and changed places with it before reaching it.
+    let steps: [CGFloat]
     let vertical: Bool
     /// The row's coordinate space, not the tab's: a tab that has just moved
     /// keeps its bearings (see the sidebar's grid).
@@ -982,19 +1009,56 @@ struct Carried: ViewModifier {
     var land: ((CGPoint?) -> Bool)? = nil
     /// Over that block: faint, so the place it opened shows through.
     var faded = false
+    /// Told when the tab is picked up and when it is put down, called off
+    /// or cancelled: the row it is carried along can show its tabs' shapes.
+    var holding: ((Bool) -> Void)? = nil
     let move: (Int) -> Void
 
     @State private var held = false
     @State private var from = 0
+    /// Where in the row its leading edge was when it was picked up.
+    @State private var start: CGFloat = 0
     @State private var travel: CGFloat = 0
     @State private var reordered = false
+    /// Where it was drawn in `space` when it was picked up, read once by the
+    /// held item alone, so the others measure nothing as the row scrolls.
+    @State private var origin: CGFloat?
+    /// True while the drag lasts, and put back by SwiftUI when it is called
+    /// off as well as when it ends (see CarryGuard).
+    @GestureState private var carrying = false
+    @State private var ticket = UUID()
+    /// Cancelled with Escape: put down until the hand lets go, not picked
+    /// up again by its next move.
+    @State private var escaped = false
 
     func body(content: Content) -> some View {
         // What it has travelled, less the ground its new place has already
-        // given it.
-        let shift = held ? travel - CGFloat(index - from) * step : 0
+        // given it: until its origin is read, the frame after pick-up, before
+        // it has gone anywhere.
+        let shift = held ? travel - (Carried.leading(of: index, in: steps) - start) : 0
         return content
-            .offset(x: vertical ? 0 : shift, y: vertical ? shift : 0)
+            // Always attached and asked only while held. A reader added under
+            // the hand at pick-up changed the view and called the drag off
+            // (RowCarryTests' pair carry failed 8 of 8, 2026-11-07).
+            .onGeometryChange(for: CGFloat?.self, of: { [held, vertical, space] proxy in
+                guard held else { return nil }
+                let frame = proxy.frame(in: .named(space))
+                return vertical ? frame.minY : frame.minX
+            }) { drawn in
+                if origin == nil, let drawn { origin = drawn }
+            }
+            // Its place springs when it passes another tab, so the ground the
+            // place has given it is where the place is drawn this frame, not
+            // where the spring will end. Taken from the end, the tab fell a
+            // place behind the hand at every tab it passed and drifted back.
+            .visualEffect { [held, origin, travel, shift, vertical, space] content, proxy in
+                var moved = shift
+                if held, let origin {
+                    let frame = proxy.frame(in: .named(space))
+                    moved = origin + travel - (vertical ? frame.minY : frame.minX)
+                }
+                return content.offset(x: vertical ? 0 : moved, y: vertical ? moved : 0)
+            }
             .background {
                 if let browser, let tab, browser.prefs.usesTabGroups, let group = browser.group(of: tab) {
                     GeometryReader { geometry in
@@ -1015,10 +1079,15 @@ struct Carried: ViewModifier {
             .opacity(held && faded ? 0.4 : 1)
             .gesture(
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(space))
+                    .updating($carrying) { _, carrying, _ in carrying = true }
                     .onChanged { value in
                         if !held {
+                            guard !escaped else { return }
                             held = true
                             from = index
+                            start = Carried.leading(of: index, in: steps)
+                            origin = nil
+                            CarryGuard.open(ticket, end: callOff)
                         }
                         travel = vertical ? value.translation.height : value.translation.width
                         // Asked every move, so the block it left lets go
@@ -1033,13 +1102,17 @@ struct Carried: ViewModifier {
                         // than moving along the row as it goes.
                         if let browser, let tab, browser.prefs.usesTabGroups, tab.pin == nil,
                            browser.group(of: tab) != nil || groupDestination?(tab, value.location) != nil { return }
-                        let target = min(max(0, from + Int((travel / step).rounded())), count - 1)
+                        let target = Carried.slot(at: start + travel, carrying: index, in: steps)
                         if target != index {
                             reordered = true
                             withAnimation(Motion.settle) { move(target) }
                         }
                     }
                     .onEnded { value in
+                        escaped = false
+                        // Already put down (see callOff): a press that
+                        // came after can't be where it was let go.
+                        guard CarryGuard.close(ticket) else { return }
                         if let browser, let tab, browser.prefs.splitView {
                             let finished = TabDrag.shared.finish(browser: browser, tab: tab)
                             let source = finished.source
@@ -1078,14 +1151,127 @@ struct Carried: ViewModifier {
                         }
                     }
             )
+            .onChange(of: carrying) { _, now in if !now { callOff() } }
+            .onChange(of: held) { _, now in holding?(now) }
             .onReceive(TabDrag.shared.$cancelledID) { id in
                 guard id == tab?.id, held else { return }
+                CarryGuard.close(ticket)
+                escaped = true
+                if let tab { TabDrag.shared.callOff(tab) }
                 _ = land?(nil)
                 if reordered { move(from) }
                 held = false
                 travel = 0
                 reordered = false
             }
+    }
+
+    /// Where the item at `index` starts in the row: the places before it.
+    static func leading(of index: Int, in steps: [CGFloat]) -> CGFloat {
+        steps.prefix(max(0, index)).reduce(0, +)
+    }
+
+    /// The place for the item at `index` with its leading edge at `edge`:
+    /// past a neighbour once it has come half that neighbour's place, going
+    /// either way. With every place the same, that is a move each half step,
+    /// as it always was; a pair is passed at its middle, not after a tab's
+    /// length.
+    static func slot(at edge: CGFloat, carrying index: Int, in steps: [CGFloat]) -> Int {
+        guard steps.indices.contains(index) else { return index }
+        var others = steps
+        others.remove(at: index)
+        var slot = index
+        var before = leading(of: slot, in: others)
+        while slot < others.count, edge > before + others[slot] / 2 {
+            before += others[slot]
+            slot += 1
+        }
+        while slot > 0, edge < before - others[slot - 1] / 2 {
+            slot -= 1
+            before -= others[slot]
+        }
+        return slot
+    }
+
+    /// The drag taken away without onEnded (see CarryGuard): put down where
+    /// it is, nothing dropped across, the split it may have been showing
+    /// let go of. After a real end, held is already false and this is nothing.
+    private func callOff() {
+        CarryGuard.close(ticket)
+        escaped = false
+        guard held else { return }
+        if let browser, let tab, browser.prefs.splitView { TabDrag.shared.callOff(tab) }
+        _ = land?(nil)
+        withAnimation(Motion.settle) {
+            held = false
+            travel = 0
+            reordered = false
+        }
+    }
+}
+
+/// A tab is being carried along the run of tabs across the top: every tab of
+/// it wears the faint grey of a pinned one, so a tab half under the one
+/// carried still shows where it is.
+private struct RowCarryingKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var rowCarrying: Bool {
+        get { self[RowCarryingKey.self] }
+        set { self[RowCarryingKey.self] = newValue }
+    }
+}
+
+/// A tab or pin carried by hand (Carried, PinCarried) that never hears the
+/// drag end (#846). SwiftUI calls a drag off, without a word to onEnded,
+/// when what is drawn in the carried view changes under the hand: a square
+/// whose page starts loading as the press that picks it up selects it (the
+/// ring in place of its icon, a second or so in), or whose icon arrives.
+/// The square kept its held state and stayed floating mid-drag, shadowed,
+/// the block it was over still showing where it would land. Each carry now
+/// ends twice over: when SwiftUI puts its @GestureState back, which it does
+/// on a call-off too, and, should even that not come, at the next press of
+/// the button anywhere in Search, which can't go down again before the
+/// carry it was holding is over. A row is carried the same way and guarded
+/// the same way.
+@MainActor
+enum CarryGuard {
+    private static var carries: [UUID: () -> Void] = [:]
+    private static var monitor: Any?
+
+    /// Carries under way, for the tests.
+    static var count: Int { carries.count }
+
+    static func open(_ id: UUID, end: @escaping () -> Void) {
+        carries[id] = end
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            MainActor.assumeIsolated { CarryGuard.endAll() }
+            return event
+        }
+    }
+
+    /// True when it was still open: not already ended here.
+    @discardableResult
+    static func close(_ id: UUID) -> Bool {
+        guard carries.removeValue(forKey: id) != nil else { return false }
+        if carries.isEmpty { stop() }
+        return true
+    }
+
+    /// Every carry still open, ended where it is.
+    static func endAll() {
+        let stale = carries.values
+        carries = [:]
+        stop()
+        for end in stale { end() }
+    }
+
+    private static func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
     }
 }
 
@@ -1331,6 +1517,12 @@ struct TabMenu: View {
                 }
             }
             Button("Unpin") { browser.unpin(tab) }
+            // Away for good in one go, where Unpin, finding the row and its
+            // × took three (#834); ⇧⌘T brings it back as a tab.
+            Button("Delete") {
+                browser.unpin(tab)
+                browser.close(tab)
+            }
         }
         // A shared pin is in every space already: nowhere to move it.
         if browser.prefs.usesSpaces, !tab.bench, !tab.everywhere,
@@ -1439,7 +1631,14 @@ struct TabMenu: View {
         }
         .disabled(browser.awake(because: tab) != nil)
         Divider()
-        Button("Close Tab", action: close)
+        // Right-clicked among tabs picked in the column: all of them, as ⌘W
+        // closes them.
+        let picked = browser.selectedTabIDs.contains(tab.id) ? browser.visibleSelectedTabCount : 1
+        if picked > 1 {
+            Button("Close \(picked) Tabs") { browser.closePickedTabs() }
+        } else {
+            Button("Close Tab", action: close)
+        }
         Button("Close Other Tabs") { browser.closeOthers(but: tab) }
             .disabled(browser.tabs.count < 2)
         Button(browser.prefs.sidebar ? "Close Tabs Below" : "Close Tabs to the Right") { browser.closeTabsBelow(tab) }
@@ -1470,6 +1669,12 @@ struct TabPress: ViewModifier {
     /// letting go wasn't moved at all.
     static let travel: CGFloat = 4
 
+    /// When the last press opened its tab, until the next press (or the
+    /// release, after a drag). A tab carried from it onto the page asks (see
+    /// TabDrag.begin): the page under the hand is then its own, with
+    /// nothing to split.
+    private(set) static var openedAt: TimeInterval?
+
     func body(content: Content) -> some View {
         content.onLongPressGesture(minimumDuration: .infinity, maximumDistance: TabPress.travel, pressing: { down in
             pressing?.wrappedValue = down
@@ -1478,16 +1683,23 @@ struct TabPress: ViewModifier {
                 // did stands until the release, so the release can't take
                 // it for a fresh click on the tab now on screen.
                 if NSEvent.pressedMouseButtons & 1 != 0 {
-                    TabPress.untilRelease { selected = false }
+                    TabPress.untilRelease { selected = false; TabPress.openedAt = nil }
                     return
                 }
                 // The row's release handler must see which press selected it.
+                // `openedAt` stays until the next press: an event made by a
+                // test has no button down, and a drag it carries on with
+                // still asks.
                 DispatchQueue.main.async { selected = false }
                 return
             }
+            TabPress.openedAt = nil
             guard enabled, NSEvent.modifierFlags.intersection([.command, .control, .shift]).isEmpty else { return }
             selected = !active
-            if selected { act() }
+            if selected {
+                TabPress.openedAt = ProcessInfo.processInfo.systemUptime
+                act()
+            }
         }, perform: {})
     }
 

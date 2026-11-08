@@ -51,12 +51,12 @@ final class Links: NSObject, NSApplicationDelegate {
     /// Quitting closes every window on the way out; that isn't a window
     /// closed for good, whose tabs would go (see Browsers.closing).
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let waiting = MainActor.assumeIsolated {
-            Browsers.quitting = true
-            return Browser.cancelAllFileImports()
-        }
+        let waiting = MainActor.assumeIsolated { Browser.cancelAllFileImports() }
         guard waiting else {
             terminationPending = false
+            // Only once the quit goes ahead: while it waits on an import,
+            // a window closed is closed for good.
+            MainActor.assumeIsolated { Browsers.quitting = true }
             return .terminateNow
         }
         if !terminationPending {
@@ -150,6 +150,7 @@ final class Links: NSObject, NSApplicationDelegate {
         // among it — goes (Security).
         DispatchQueue.global(qos: .utility).async { ImportFile.sweepScratch() }
         Trim.start()
+        MainActor.assumeIsolated { Shared.prefs.followFile() }
         let plain = notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool ?? true
         guard !plain else { return }
         DispatchQueue.main.async {
@@ -307,12 +308,37 @@ final class Links: NSObject, NSApplicationDelegate {
     @MainActor
     private static func little(_ url: URL) -> Bool {
         guard Shared.prefs.littleLinks else { return false }
+        if Shared.prefs.littleFindsTabs, goToOpen(url) { return true }
         if !launched { Browsers.keepAway() }
         // The space and sign-ins of the window in front, on screen or not.
         let browser = Browsers.front.flatMap { !$0.isPopup ? $0 : nil }
             ?? Browsers.primary ?? SceneSlot.shared.browser
         LittleWindow.show(url, for: browser)
         return true
+    }
+
+    /// The page already open, for whoever asked for that in Settings: a
+    /// small window that has it comes forward, or a tab that has it, in its
+    /// window, the window in front looked in first. Only each window's
+    /// space on screen, as the address field's open pages are. False when
+    /// none has it.
+    @MainActor
+    private static func goToOpen(_ url: URL) -> Bool {
+        if let little = LittleWindow.all.last(where: { Browser.samePage(url, $0.tab.address) }) {
+            little.front()
+            return true
+        }
+        let windows = [Browsers.front].compactMap { $0 } + Browsers.all.reversed()
+        for browser in windows where browser.isOpen && !browser.isPopup {
+            guard let tab = browser.tabs.first(where: { Browser.samePage(url, $0.address) }) else { continue }
+            // Windows a small window's launch kept off screen come back
+            // first, all of them, as Open in Search brings them.
+            Browsers.bringBack()
+            browser.bringForward(tab.id)
+            comeForward()
+            return true
+        }
+        return false
     }
 
     /// A link that launches the app arrives as an Apple Event, taken above,

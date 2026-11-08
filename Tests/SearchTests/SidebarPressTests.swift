@@ -42,6 +42,26 @@ final class SidebarPressTests: XCTestCase {
         XCTAssertEqual(browser.editingTab, first.id, "A fresh click on the active row still edits")
     }
 
+    func testRowLeftPickedAloneSelectsOnPressAgain() async throws {
+        let browser = makeBrowser()
+        let first = browser.tabs[0]
+        let last = browser.tabs[2]
+        let window = makeWindow(browser)
+        try await settle()
+        browser.extendTabSelection(to: first, modifiers: .command)
+        try await settle()
+        XCTAssertTrue(browser.isPickedAmongOthers(first))
+        // Still picked, but alone now: its row's press is a plain press again.
+        browser.extendTabSelection(to: last, modifiers: .command)
+        try await settle()
+        XCTAssertEqual(browser.selectedTabIDs, [first.id])
+        XCTAssertFalse(browser.isPickedAmongOthers(first))
+        let point = rowPoint(0, in: window)
+        try await send(.leftMouseDown, at: point, in: window)
+        XCTAssertEqual(browser.activeID, first.id, "The page must change while the button is held")
+        try await send(.leftMouseUp, at: point, in: window)
+    }
+
     func testPressThenDragStillReordersWithoutEditing() async throws {
         let browser = makeBrowser()
         let first = browser.tabs[0]
