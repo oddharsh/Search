@@ -86,9 +86,12 @@ enum Vault {
     /// two hundred of them.
     static func kept(matching host: String, wide: Bool = true) -> [Kept] {
         let domain = registrable(host)
-        return bySite.kept(on: domain)
-            .filter { belongs($0.host, to: host, wide: wide, domain: domain) }
-            .sorted { ($0.used ?? .distantPast) > ($1.used ?? .distantPast) }
+        let found = bySite.kept(on: domain).filter { belongs($0.host, to: host, wide: wide, domain: domain) }
+        // The host's own accounts first, the site's others after them: each
+        // group newest first.
+        let newest: (Kept, Kept) -> Bool = { ($0.used ?? .distantPast) > ($1.used ?? .distantPast) }
+        return found.filter { $0.host == host }.sorted(by: newest)
+            + found.filter { $0.host != host }.sorted(by: newest)
     }
 
     /// Read ahead, off the main thread, for the first box focused: a page
