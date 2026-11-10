@@ -40,64 +40,6 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **Window stutters between screens** Dragging the window from one screen to another stutters. Needs a trace recorded on two screens. *(X)*
 - [ ] **Figma and LinkedIn feel slow** Figma blurs for a moment as you zoom in; LinkedIn's feed and profiles scroll with lag. *(email)*
 
-## Done, in the next version
-
-- [x] **A site's permissions in its card** The site card lists what the site may use (camera, microphone, location, notifications, sound) and lets each be changed or forgotten there. *(email, [#782](https://github.com/driceroland/Search/issues/782), [#868](https://github.com/driceroland/Search/issues/868), [#869](https://github.com/driceroland/Search/issues/869), [#940](https://github.com/driceroland/Search/pull/940))*
-- [x] **Offer to save sign-ins sent by the page's script** form.submit() from a link, a timer or a styled box fires no submit event, so no offer came. *([#705](https://github.com/driceroland/Search/pull/705))*
-- [x] **Accounts for the exact host first** With logins for admin.example.com and admin-qa.example.com, both show on either. Show the host's own accounts first (or only). *([#723](https://github.com/driceroland/Search/pull/723))*
-- [x] **Settings follow defaults write while running** A defaults write to Search's settings lands in the running app, and its switch moves, as a click in Settings would. *([#736](https://github.com/driceroland/Search/issues/736), [#946](https://github.com/driceroland/Search/pull/946))*
-- [x] **Verification codes from Apple Passwords** The one-time codes kept in Apple's Passwords app offered under a code field, as Safari does. *(email, [#855](https://github.com/driceroland/Search/pull/855))*
-- [x] **Reading mode misses parts of some articles** Whole article as in Safari; and reading mode follows a dark window by default. *([#757](https://github.com/driceroland/Search/issues/757), [#774](https://github.com/driceroland/Search/pull/774))*
-- [x] **A notification opens the tab that sent it** Clicking a site's notification goes to the tab it came from, not the first tab on that site. *([#776](https://github.com/driceroland/Search/issues/776), [#864](https://github.com/driceroland/Search/pull/864))*
-- [x] **A sleeping tab wakes zoomed in** The picture shown while a tab wakes comes back at twice its size on a Retina screen. *([#781](https://github.com/driceroland/Search/issues/781), [#820](https://github.com/driceroland/Search/issues/820), [#871](https://github.com/driceroland/Search/pull/871))*
-- [x] **Dark SVG icons vanish in dark mode** *([#807](https://github.com/driceroland/Search/issues/807), [#917](https://github.com/driceroland/Search/pull/917))*
-- [x] **Copy a download's address** In Downloads, to hand it to another download app *([#853](https://github.com/driceroland/Search/issues/853), [#863](https://github.com/driceroland/Search/pull/863))*
-- [x] **Shift-Return searches with a second engine** Optional picker, off until set *([#848](https://github.com/driceroland/Search/issues/848), [#856](https://github.com/driceroland/Search/pull/856))*
-- [x] **A carried tab springs back at each swap** Carrying a tab, each change of place draws it back where it was for a moment before it glides to the pointer, most past a Split View pair. *([#886](https://github.com/driceroland/Search/issues/886), [#979](https://github.com/driceroland/Search/pull/979))*
-- [x] **The blocker's switch for a site in its card** Turning the blocker off for one site is in Settings › Privacy today; the site's card is where people look for it. *([#861](https://github.com/driceroland/Search/issues/861) ×2)*
-- [x] **Engine suggestions wear the engine's icon** Every row in the address field's list that searches wears the mark of where it searches, and a site put in the field with Tab matches its rows. *([#879](https://github.com/driceroland/Search/issues/879), [#881](https://github.com/driceroland/Search/pull/881))*
-- [x] **A site in the field names itself** With a site put in the address field with Tab, the empty field says Search and the site's name. *([#888](https://github.com/driceroland/Search/pull/888))*
-- [x] **The page hears nothing under the address field and panels** Under the address field, the tab switcher, the hidden elements' list, Welcome, What's New and the Find bar, the page no longer reacts to the pointer. *([#877](https://github.com/driceroland/Search/issues/877), [#878](https://github.com/driceroland/Search/pull/878))*
-- [x] **Past searches under a site in the field** With a site put in the field with Tab, or a site shortcut, the list offers what you searched that site for before, read from your history and never in a private tab; your engine's suggestions too when the site is your engine. *([#880](https://github.com/driceroland/Search/issues/880), [#882](https://github.com/driceroland/Search/pull/882))*
-- [x] **Search pages in history read as searches** A results page you visited shows in the address field's list as the words you searched and the site, not as its address. *([#889](https://github.com/driceroland/Search/pull/889))*
-- [x] **A carried tab stays under the pointer past a pair** With Split View on, a tab carried along the sidebar or the tab row stays under the pointer as it passes a pair and lands where it is let go. *([#883](https://github.com/driceroland/Search/issues/883), [#884](https://github.com/driceroland/Search/pull/884))*
-- [x] **A tab whose video is full screen elsewhere can be gone back to** Choosing again a tab whose video is still full screen in its own Space no longer leaves the window without its column. *([#876](https://github.com/driceroland/Search/pull/876))*
-- [x] **The downloads button pulses when a download starts** One short pulse of the downloads button when a download begins, still under Reduce Motion. *([#830](https://github.com/driceroland/Search/issues/830), [#865](https://github.com/driceroland/Search/pull/865))*
-- [x] **A private tab's PDF stays out of Downloads** A PDF saved with the PDF bar's button from a private tab is announced and listed nowhere, like any other private download. *([#866](https://github.com/driceroland/Search/pull/866))*
-- [x] **Claude in Chrome's window gives back its tab first** windows.create listed the space's pins first; Claude grouped tabs[0], a pin, and every action failed *([#872](https://github.com/driceroland/Search/issues/872))*
-- [x] **Discord signs you out with the column out** A page read the whole window, column included, as its width; Discord took the difference for developer tools open. *([#916](https://github.com/driceroland/Search/issues/916))*
-- [x] **Letters beside a tab's title** With Tabs show: Letters, rows showed no letter beside the title, though the setting says they do. *([#919](https://github.com/driceroland/Search/issues/919), [#860](https://github.com/driceroland/Search/issues/860))*
-- [x] **Reduce Motion stills the last three animations** The empty tab's glow, the slide between spaces and the space icon's turn keep still with Reduce Motion on. *([#901](https://github.com/driceroland/Search/pull/901))*
-- [x] **A carried pair comes apart only where shown** A Split View pair let go a few points past its edge stays a pair, unless resting there showed it coming apart. *([#885](https://github.com/driceroland/Search/issues/885), [#887](https://github.com/driceroland/Search/pull/887))*
-- [x] **A tab just passed shows while one is carried** Carrying a tab across the top, the others wear a faint grey so the one half under it still shows. *([#898](https://github.com/driceroland/Search/issues/898), [#899](https://github.com/driceroland/Search/pull/899))*
-- [x] **Back stays off on a pin put down** A pin put down with ⌘W and clicked again no longer shows Back lit with nothing behind it. *([#891](https://github.com/driceroland/Search/issues/891), [#896](https://github.com/driceroland/Search/pull/896))*
-- [x] **⇧⌘T brings back Search's own pages** History, Settings, Downloads and the rest come back with ⇧⌘T, still one tab of each. *([#892](https://github.com/driceroland/Search/issues/892), [#897](https://github.com/driceroland/Search/pull/897))*
-- [x] **⇧⌘T brings a tab back with its history** A reopened tab keeps Back, Forward and its place on the page. Private tabs are still never kept. *([#890](https://github.com/driceroland/Search/issues/890), [#895](https://github.com/driceroland/Search/pull/895))*
-- [x] **⌘W puts the raised field away** With the address field raised over a page by ⌘L or ⌘K, ⌘W puts the field away, as after ⌘T. *([#903](https://github.com/driceroland/Search/issues/903), [#910](https://github.com/driceroland/Search/pull/910))*
-- [x] **An address typed into ⌘K opens a new tab** What no open tab answers to is a last row in ⌘K's list and opens in a new tab, not over the page. *([#904](https://github.com/driceroland/Search/issues/904), [#911](https://github.com/driceroland/Search/pull/911))*
-- [x] **The key that raised the field puts it away** ⌘T, ⌘L or ⌘K again puts its field away, and switching between them keeps what was typed. *([#905](https://github.com/driceroland/Search/issues/905), [#912](https://github.com/driceroland/Search/pull/912))*
-- [x] **The field says where Return goes** The empty field's placeholder names a new tab, this tab, or an open tab, whichever key raised it. *([#906](https://github.com/driceroland/Search/issues/906), [#913](https://github.com/driceroland/Search/pull/913))*
-- [x] **A video on another screen stays put when you switch apps** With Float the video when you switch apps on, a video in a window on a TV or second display floated out when you worked in another app on the other screen. It now floats only when the other app comes up on the same screen. *(message, [#894](https://github.com/driceroland/Search/issues/894), [#761](https://github.com/driceroland/Search/issues/761))*
-- [x] **Optional native messaging for extensions** An extension that asks for native messaging among its optional permissions can reach its app on this Mac once allowed. *([#741](https://github.com/driceroland/Search/issues/741), [#751](https://github.com/driceroland/Search/pull/751))*
-- [x] **Now playing in the sidebar** A tab playing sound out of sight shows at the foot of the sidebar with its pause; off by default. *([#764](https://github.com/driceroland/Search/pull/764))*
-- [x] **Clearer line on the focused split page** In Split View, the page with the keys has a stronger line round it. *([#937](https://github.com/driceroland/Search/issues/937))*
-- [x] **Sidebar drag splits the page again** A tab carried from the sidebar onto the page can split it again. *([#927](https://github.com/driceroland/Search/issues/927))*
-- [x] **One ⇧⌘T brings back a closed pair** After Close Both Pages, one ⇧⌘T brings the pair back together. *([#929](https://github.com/driceroland/Search/issues/929))*
-- [x] **⌥⌘N on a pair puts it apart** The key that makes a split takes it away again. *([#931](https://github.com/driceroland/Search/issues/931))*
-- [x] **Empty split half finds open tabs** Typing in the empty half of a pair offers matching open tabs. *([#933](https://github.com/driceroland/Search/issues/933))*
-- [x] **Split zones shown while carrying a tab** A page shows where a carried tab would split it. *([#935](https://github.com/driceroland/Search/issues/935))*
-- [x] **Links opened in front join their group** Plus closing such a page goes back to where it was clicked, and an optional switch puts them beside their page. *([#961](https://github.com/driceroland/Search/issues/961))*
-- [x] **Closed tabs stop their sound** A tab closed while playing stops its media and doesn't come back in the background. *([#943](https://github.com/driceroland/Search/pull/943))*
-- [x] **uBlock Origin Lite and GitLab** Rules WebKit can't follow correctly are left out, so GitLab loads. *([#858](https://github.com/driceroland/Search/pull/858))*
-- [x] **Extension popup in the right window** With several windows, a popup opens in the window where its button was pressed. *([#839](https://github.com/driceroland/Search/pull/839))*
-- [x] **Keep the window in use during full screen** Optional: browse other tabs while a video is full screen on another desktop. Off by default. *([#972](https://github.com/driceroland/Search/issues/972))*
-- [x] **Recent places in the new tab** Optional: ⌘T lists recent places before anything is typed. Off by default. *([#907](https://github.com/driceroland/Search/issues/907))*
-- [x] **History suggestions weigh frequency** Places you visit often rank above ones seen once. *([#944](https://github.com/driceroland/Search/pull/944))*
-- [x] **Choose the translation language** Settings › Browsing › Pages: which language pages are translated into. *([#821](https://github.com/driceroland/Search/pull/821))*
-- [x] **Small windows reopen where left** A link's small window opens at the place and size it was last left, centred if that screen is gone. *([#789](https://github.com/driceroland/Search/pull/789))*
-- [x] **Links from apps find their open tab** With links from other apps in a small window, a link to a page already open goes to its tab. Off by default. *([#798](https://github.com/driceroland/Search/pull/798))*
-- [x] **Muted video floats on desktop switch** A muted video WebKit paused out of sight floats when you go to another desktop; one paused by hand stays. *([#791](https://github.com/driceroland/Search/pull/791))*
-
 ## Now — fixes for the next update
 
 - [ ] **Spaces sometimes don't switch** *(email)*
@@ -112,7 +54,6 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **iCloud Passwords keeps its pairing** On macOS 27 iCloud Passwords asks for its code again every couple of minutes; the keep-alive no longer holds. *([#610](https://github.com/driceroland/Search/issues/610))*
 - [ ] **History scrolling stutters in full screen** search://history scrolls smoothly in a window but stutters in full screen, worse with a Sidecar iPad connected. *([#730](https://github.com/driceroland/Search/issues/730))*
 - [ ] **Dusk memory on restless pages** Dusk copies style sheets again and again on pages whose styles never settle, and keeps the old copies. *([#740](https://github.com/driceroland/Search/issues/740))*
-- [ ] **Pins after closing windows quickly** Closing several windows fast can lose a pin and draw New Tab upside down. *([#750](https://github.com/driceroland/Search/issues/750))*
 
 ## Next — small additions people asked for
 
@@ -154,7 +95,10 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **Remember a site's choice to open an app** A box in the Open app question to always let that site open that app, listed in Settings › Privacy with Remove. *([#909](https://github.com/driceroland/Search/issues/909))*
 - [ ] **Open Link in Private Tab** In a link's right-click menu, after Open Link in New Tab, as the bookmarks bar already has it. *([#902](https://github.com/driceroland/Search/issues/902))*
 - [ ] **Escape stays with the page in full screen** In the window's own full screen (the green button, ⌃⌘F), one Escape takes the window out of full screen even when a site wanted it, to close its own pop-up. Safari leaves the window as it is and gives the key to the page; only a video's full screen goes at one Escape. Needs checking against Press Esc twice to leave full screen, which keeps the first press from the page. *([#981](https://github.com/driceroland/Search/issues/981))*
-- [ ] **Fill in your contact details** Off by default: a box for your name, email, phone or address offers your own card in Contacts, filled on a click, as Safari does. *([#925](https://github.com/driceroland/Search/pull/925))*
+- [ ] **Page loads redraw only the tab's own bar** A tab's load progress, loading state and Back/Forward are published on the tab itself, so every view watching the tab redraws through each load. Give them their own small object, as scrolling already has. *([#999](https://github.com/driceroland/Search/issues/999))*
+- [ ] **Extensions' compatibility script loads once per frame, smaller** Search's compatibility script for Chrome extensions (~229 KB) runs in every frame each extension's content scripts match, before the extension's own code. Load only the parts a frame can use, or share it between an extension's scripts. *([#997](https://github.com/driceroland/Search/issues/997))*
+- [ ] **Peek opens some links as a plain page** On big sites like Reddit, Shift-click on links in headers and on pictures opens the page itself instead of a peek. *(email)*
+- [ ] **Drag a tab out of its group** Carried past the group's first or last tab, a tab leaves the group and lands where it is let go. *([#1009](https://github.com/driceroland/Search/issues/1009))*
 
 ## Later — bigger pieces of work
 
@@ -170,7 +114,6 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **A picture behind the new tab** An image behind the new tab page, perhaps from Unsplash. Off unless turned on, if it ever comes. *([#447](https://github.com/driceroland/Search/issues/447))*
 - [ ] **Main process grows over days** The app's own process grew to several times its fresh size over a week of use; find what accumulates (closed windows, caches).
 - [ ] **Small windows: alone and keyed** A link small window opens alone, takes its keys, closes with a swipe back, cascades, and shows in the switcher. *([#431](https://github.com/driceroland/Search/pull/431), [#519](https://github.com/driceroland/Search/pull/519), [#474](https://github.com/driceroland/Search/pull/474), [#493](https://github.com/driceroland/Search/pull/493), [#480](https://github.com/driceroland/Search/pull/480))*
-- [ ] **Proxy for the whole browser** HTTP and SOCKS5 proxy in Settings, off by default, everything through it. *([#510](https://github.com/driceroland/Search/pull/510))*
 - [ ] **Float a whole page** Any page, not only a video, in the floating window, and meetings that float when you switch away. Off unless turned on. *([#584](https://github.com/driceroland/Search/pull/584))*
 - [ ] **One window per space** A switch so each space opens in a window of its own. *([#611](https://github.com/driceroland/Search/issues/611))*
 - [ ] **Why a tab stays awake** A small view listing which tabs sleep and why the others stay awake. Off by default. *([#624](https://github.com/driceroland/Search/issues/624), [#628](https://github.com/driceroland/Search/pull/628))*
@@ -221,10 +164,14 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **Back and Forward kept across a relaunch** Each tab comes back after a quit with its page only; keep its Back and Forward list too, as other browsers do. *([#893](https://github.com/driceroland/Search/issues/893))*
 - [ ] **Page scripts set up once per tab** A tab removes and adds back all of Search's own page scripts on every veil or style change; set the fixed ones up once. *([#859](https://github.com/driceroland/Search/issues/859))*
 - [ ] **ChatGPT's side panel signed in** ChatGPT's panel needs its site's cookies in a frame under the extension page; waits on a WebKit fix. *([#837](https://github.com/driceroland/Search/issues/837))*
+- [ ] **A limit on how many tabs stay awake** Tabs sleep after a set time, but nothing bounds how many stay awake or how much memory they hold, so a long session grows until macOS slows everything down. Sleep the least recently used ones past a count or a memory budget, keeping what you're looking at, playing or typing in. *([#998](https://github.com/driceroland/Search/issues/998))*
+- [ ] **mymind extension: Add to my mind** mymind's right-click Add to my mind and its toolbar button don't save the page, though you're signed in at access.mymind.com. *([#996](https://github.com/driceroland/Search/issues/996))*
+- [ ] **Apple Passwords on sign-up forms** Suggest a strong password from Apple's Passwords app on a sign-up form, and save the new name and password there. *([#991](https://github.com/driceroland/Search/issues/991))*
+- [ ] **Peek with the mouse alone** A peek from a mouse gesture, a long press or a click-and-drag on a link, for people who don't want a modifier key. Off unless chosen in Settings. *(email)*
+- [ ] **Fold the column to icons** An option: ⌘S and the column's button switch between the full column and Icons only, instead of hiding it. *([#1008](https://github.com/driceroland/Search/issues/1008))*
 
 ## Pull requests to review
 
-- [ ] **Send links to a space** Links from chosen sites open in a given space, with its sign-ins, as Arc's Air Traffic Control does. *(email, [#595](https://github.com/driceroland/Search/issues/595) ×2, [#596](https://github.com/driceroland/Search/pull/596), [#721](https://github.com/driceroland/Search/issues/721), [#722](https://github.com/driceroland/Search/pull/722))*
 - [ ] **uBlock blocks from the first second after launch** Session rules set again at every launch recompile every rule, and new tabs go unblocked meanwhile. *([#711](https://github.com/driceroland/Search/pull/711))*
 - [ ] **Redraw only what changed** Typing, Find and swipes redraw only the views that show them; rows stop observing the whole browser. *([#706](https://github.com/driceroland/Search/pull/706))*
 
@@ -254,12 +201,10 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **Extension side panels** Extensions that open in Chrome's side panel, like ChatGPT's and Claude's, have nowhere to open: WebKit has no side panel. *(email)*
 - [ ] **Group tabs by dropping one on another** Drop a tab onto another in the column and the two become a group. *(email)*
 - [ ] **One place for ⌘T, ⌘K and ⌘Y** New tab, the open tabs and history reached from a single field. *(email)*
-- [ ] **Open tabs from Helium** Bringing things over from Helium takes its bookmarks, history, passwords and extensions, but not the tabs it has open. *(email, [#840](https://github.com/driceroland/Search/issues/840), [#841](https://github.com/driceroland/Search/pull/841))*
 - [ ] **⌘L again closes the address** A second ⌘L puts away the address field it opened, as Esc does. *(email)*
 - [ ] **Tabs that pause, not reload** An option to keep a resting tab's page and let WebKit suspend it, off by default. *([#520](https://github.com/driceroland/Search/issues/520))*
 - [ ] **Option-Command arrows to move between tabs** *([#532](https://github.com/driceroland/Search/issues/532))*
 - [ ] **Share the screen with its sound** WebKit gives a shared screen no sound track, even when a call asks for one; it would mean capturing the sound ourselves and feeding it to the page. *([#540](https://github.com/driceroland/Search/issues/540))*
-- [ ] **Floating video flickers popping out** The video shifts and flickers as it pops out of the page. *([#543](https://github.com/driceroland/Search/issues/543), [#547](https://github.com/driceroland/Search/pull/547), [#562](https://github.com/driceroland/Search/pull/562), [#584](https://github.com/driceroland/Search/pull/584))*
 - [ ] **Float a meeting page when you switch away** *([#544](https://github.com/driceroland/Search/issues/544), [#547](https://github.com/driceroland/Search/pull/547))*
 - [ ] **CleanMyMac flags Search as unwanted** CleanMyMac's "Mac Search - PUA" is a false positive: Search is a notarised Developer ID app, and MacPaw has been told. *([#556](https://github.com/driceroland/Search/issues/556))*
 - [ ] **YouTube dislike counts don't show** Return YouTube Dislike installs but its counts never appear on YouTube; a userscript doing the same works. *([#588](https://github.com/driceroland/Search/issues/588))*

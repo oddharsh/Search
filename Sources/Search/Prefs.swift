@@ -161,6 +161,16 @@ final class Preferences: ObservableObject {
     @Published var sideIcons: Bool {
         didSet { store.set(sideIcons, forKey: "sidebar.icons") }
     }
+    /// ⌘S makes the column icons only, and gives it its titles back, rather
+    /// than folding it away: the tabs stay in sight (idea 620). Off unless
+    /// asked for; Settings › Appearance › Tabs.
+    @Published var foldsToIcons: Bool {
+        didSet { store.set(foldsToIcons, forKey: "sidebar.foldIcons") }
+    }
+    /// Whether ⌘S does that as things are set: with the tabs down a side,
+    /// and not with the column kept folded, where ⌘S is what brings it out
+    /// to stay (see Fold.swift).
+    var shrinks: Bool { sidebar && foldsToIcons && !sideHides }
     /// Whether the column is showing as icons now: down a side, and asked for.
     var iconColumn: Bool { sidebar && sideIcons }
     /// The column's width as drawn: fixed with icons only, pulled by its
@@ -380,6 +390,14 @@ final class Preferences: ObservableObject {
     @Published var fillsPasswords: Bool {
         didSet { store.set(fillsPasswords, forKey: "passwords.fill") }
     }
+    /// Your card in Contacts under the boxes for your name, email, phone and
+    /// address (MeCard). Off unless turned on, which is when macOS asks.
+    @Published var fillsContacts: Bool {
+        didSet {
+            store.set(fillsContacts, forKey: "contacts.fill")
+            FormRelay.contacts = fillsContacts
+        }
+    }
     /// Accounts from the Mac's Passwords app under the sign-in box too, by
     /// Apple's helper for its Chrome extension (ApplePasswords.swift). Off
     /// unless turned on: unofficial, and it pairs with a code.
@@ -477,6 +495,15 @@ final class Preferences: ObservableObject {
     /// goes to that tab instead (see Links.little). Off unless asked for.
     @Published var littleFindsTabs: Bool {
         didSet { store.set(littleFindsTabs, forKey: "links.little.tabs") }
+    }
+    /// Links to chosen sites open in their space (see SpaceRoutes.swift).
+    /// Off unless asked for, and only with spaces on.
+    @Published var sendsLinksToSpaces: Bool {
+        didSet { store.set(sendsLinksToSpaces, forKey: SpaceRoutes.key) }
+    }
+    /// Which site goes to which space, for that.
+    @Published var spaceRoutes: [SpaceRoute] {
+        didSet { store.set(spaceRoutes.map(\.plist), forKey: SpaceRoutes.rulesKey) }
     }
     /// The downloads button always in the chrome, not only while something
     /// downloads (see Fetching.swift). Off unless asked for.
@@ -733,6 +760,7 @@ final class Preferences: ObservableObject {
         sideHides = store.bool(forKey: "sidebar.hides")
         roomyTabs = store.bool(forKey: "sidebar.roomy")
         sideIcons = store.bool(forKey: "sidebar.icons")
+        foldsToIcons = store.bool(forKey: "sidebar.foldIcons")
         showsPlayer = store.bool(forKey: "sidebar.player")
         let width = store.object(forKey: "sidebar.width") as? Double ?? Double(Metrics.side)
         sideWidth = min(Metrics.sideMax, max(Metrics.sideMin, CGFloat(width)))
@@ -761,7 +789,7 @@ final class Preferences: ObservableObject {
         engineSuggests = store.bool(forKey: "search.suggest")
         siteNotifications = store.object(forKey: "notifications.ask") as? Bool ?? true
         showsTabShortcuts = store.bool(forKey: "tabs.shortcuts")
-        showsReading = store.object(forKey: "tabs.reading") as? Bool ?? true
+        showsReading = store.bool(forKey: "tabs.reading")
         // On for everyone who never touched it (Drice, 24 Oct 2026, on
         // Security's advice); a choice made before stands.
         showsAddress = store.object(forKey: "tabs.address") as? Bool ?? true
@@ -815,6 +843,9 @@ final class Preferences: ObservableObject {
         savesPasswords = store.object(forKey: "passwords.save") as? Bool ?? true
         fillsPasswords = store.object(forKey: "passwords.fill") as? Bool ?? true
         applePasswords = store.bool(forKey: "passwords.apple")
+        let contacts = store.bool(forKey: "contacts.fill")
+        fillsContacts = contacts
+        FormRelay.contacts = contacts
         // Anyone who already has a session was here before the welcome
         // existed; they are not asked to sit through it.
         welcomed = store.bool(forKey: "welcomed") || store.object(forKey: "glyph") != nil
@@ -861,6 +892,8 @@ final class Preferences: ObservableObject {
         readerFollowsLook = store.bool(forKey: "reader.follows")
         littleLinks = store.bool(forKey: "links.little")
         littleFindsTabs = store.bool(forKey: "links.little.tabs")
+        sendsLinksToSpaces = store.bool(forKey: SpaceRoutes.key)
+        spaceRoutes = (store.array(forKey: SpaceRoutes.rulesKey) ?? []).compactMap(SpaceRoute.init(plist:))
         bookmarksBar = store.bool(forKey: "bookmarks.bar")
         alwaysShowsDownloads = store.bool(forKey: "downloads.button")
         downloadsOpening = store.string(forKey: "downloads.open").flatMap(DownloadsOpening.init(rawValue:)) ?? .tab
@@ -943,6 +976,7 @@ final class Preferences: ObservableObject {
         take(\.sideHides, store.bool(forKey: "sidebar.hides"))
         take(\.roomyTabs, store.bool(forKey: "sidebar.roomy"))
         take(\.sideIcons, store.bool(forKey: "sidebar.icons"))
+        take(\.foldsToIcons, store.bool(forKey: "sidebar.foldIcons"))
         take(\.sideWidth, "sidebar.width", (store.object(forKey: "sidebar.width") as? Double).map { CGFloat($0) }
             .flatMap { (Metrics.sideMin...Metrics.sideMax).contains($0) ? $0 : nil }, or: Metrics.side)
         take(\.sidePanelWidth, "sidepanel.width", (store.object(forKey: "sidepanel.width") as? Double).map { CGFloat($0) }

@@ -144,7 +144,9 @@ struct SearchApp: App {
                 .shortcut("view.sidebar")
                 // Folded away, not moved (see Fold.swift) — the column, or the
                 // strip across the top.
-                Button(browser.prefs.sidebar
+                Button(browser.prefs.shrinks && !browser.folded
+                       ? (browser.prefs.sideIcons ? "Show Sidebar Titles" : "Show Sidebar as Icons Only")
+                       : browser.prefs.sidebar
                        ? (browser.folded ? "Show Sidebar" : "Hide Sidebar")
                        : (browser.folded ? "Show Tab Bar" : "Hide Tab Bar")) { browser.toggleFold() }
                     .shortcut("view.fold")
@@ -884,6 +886,10 @@ struct ContentView: View {
         .onAppear {
             watchKeys()
             browser.askFocus()
+            // Over a page, the page has the keys from the start. Left with
+            // the window, the Mac's keyboard navigation handed them to the
+            // first button that takes them, Reload, ringed.
+            handBack()
             // Addresses from other apps have somewhere to go from here on.
             Links.hand(to: browser)
             BookmarkMenu.shared.start(for: browser)
