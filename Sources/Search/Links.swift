@@ -111,6 +111,11 @@ final class Links: NSObject, NSApplicationDelegate {
     /// five of them meant five rebuilds of the content before the window
     /// had shown once.
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // The proxy, before anything can fetch. It is read when BrowserProxy
+        // is first asked for, and until then Search's own requests would go
+        // out directly: making a store happens to ask for it early on
+        // macOS 15.4, but on 14 the first update check can beat it.
+        MainActor.assumeIsolated { _ = BrowserProxy.shared }
         Links.watchForTrouble()
         NSAppleEventManager.shared().setEventHandler(
             self, andSelector: #selector(handle(getURL:reply:)),
@@ -228,23 +233,34 @@ final class Links: NSObject, NSApplicationDelegate {
         deliver = { url in
             // The window in front's browser, or a window brought back for it:
             // the link lands where you are, not in the first window.
-            let browser = Browsers.ensureWindow()
+            // Or the window, in its space, a rule of Settings › Spaces & Pins
+            // › Send links to a space sends it to (see SpaceRoutes.swift).
+            let front = Browsers.ensureWindow()
+            let browser = front.routed(url) ?? front
             browser.arrive(url)
             // Put away in the Dock, it stayed there: bringing a window to the
             // front doesn't take it out (#95).
             if let window = browser.window, window.isMiniaturized { window.deminiaturize(nil) }
-            browser.window?.makeKeyAndOrderFront(nil)
+            // A hidden probe's window stays out of sight.
+            if !(Store.testing && NSApp.isHidden) { browser.window?.makeKeyAndOrderFront(nil) }
             comeForward()
         }
         let early = waiting
         waiting = []
         guard let first = early.first else { return }
         onceShown { [weak browser] in
-            browser?.arrive(first)
+            guard let browser else { return }
+            (browser.routed(first) ?? browser).arrive(first)
             comeForward()
             for (n, url) in early.dropFirst().enumerated() {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15 * Double(n + 1)) { [weak browser] in
-                    browser?.open(url, foreground: false, atEnd: true, mayWait: true)
+                    guard let browser else { return }
+                    // One a rule sends to a space opens there, in front.
+                    if let routed = browser.routed(url) {
+                        routed.open(url, foreground: true)
+                    } else {
+                        browser.open(url, foreground: false, atEnd: true, mayWait: true)
+                    }
                 }
             }
         }
@@ -308,6 +324,8 @@ final class Links: NSObject, NSApplicationDelegate {
     @MainActor
     private static func little(_ url: URL) -> Bool {
         guard Shared.prefs.littleLinks else { return false }
+        // A site sent to a space opens there, with that space's sign-ins.
+        if SpaceRoutes.space(for: url) != nil { return false }
         if Shared.prefs.littleFindsTabs, goToOpen(url) { return true }
         if !launched { Browsers.keepAway() }
         // The space and sign-ins of the window in front, on screen or not.

@@ -13,9 +13,69 @@ in [ROADMAP.md](ROADMAP.md).
 
 ### Fixed
 
+- With New tab in a floating field on, ⌘T over a tab in a group opens its new tab outside the group, where ⌘T's tab goes with the setting off. It joined the group of the tab the field was raised over. The same for an address typed into ⌘K over a grouped tab; ⌘Return from a grouped tab's address still opens in its group. Thanks [@Chahine-tech](https://github.com/Chahine-tech) ([#1014](https://github.com/driceroland/Search/pull/1014))
 - Whatever comes up over the page puts away what was up before it: the welcome, the list of what is hidden on a site, the bookmarks dropdown, picking things to hide, ⌘K, a new Space, a peek and a tab's own field. Two could be up at once, the hidden list drawn over the welcome or ⌘K's field left under the bookmarks, and ⌃Tab did nothing until both were put away. A peek put away this way closes, as Escape closes it, and picking stops on the page.
-
 - ⌃Tab brings up the tab switcher after ⌘K was answered by opening a page, pasting an address, or a page opening a tab. ⌘K stayed on behind the field it had put away, so ⌃Tab did nothing until ⌘K was pressed again, and the next field raised still said "Switch to an open tab".
+
+### Added
+
+- ⌘S can make the column icons only instead of hiding it, so the tabs stay in sight; ⌘S again brings the titles back. Off unless you turn on Settings › Appearance › Tabs › ⌘S makes the column icons only. Not with the tabs across the top, nor with the column hidden until the pointer reaches the edge. Asked for by [@vincent-caetano](https://github.com/vincent-caetano) ([#1008](https://github.com/driceroland/Search/issues/1008)). Thanks [@Chahine-tech](https://github.com/Chahine-tech) ([#1015](https://github.com/driceroland/Search/pull/1015))
+
+### Held back
+
+Not in this version, kept on main for a later one:
+
+- AI on pages, off unless you turn it on in Settings › AI: Summarize Page and Ask About This Page… in the View menu, answered where you choose — a model downloaded to this Mac (Apple Silicon: Qwen3 1.7B, 1.1 GB, checked before every use and run by a small program of Search's own that can't reach the network or your files), Ollama or LM Studio on this Mac, your own key for Anthropic, OpenAI, Google Gemini or OpenRouter, or signing in with your OpenRouter account. The answer comes in a panel beside the page, in plain text, marked as possibly wrong and with where it ran; follow-up questions stay in the panel, and nothing is kept once it closes. Only the page's visible text goes, never a password, a form or another tab; the page's words are given to the model as something to read, not orders, and any web address, email or phone number in the answer that isn't on the page is pointed out. Keys stay in this Mac's keychain and go only to their provider; a provider off this Mac is shown what it will be sent before the first request, and a private tab uses only what runs on this Mac.
+
+## 1.0.12 — 9 November 2026
+
+### Fixed
+
+- A tab across the top can be dragged again with Tabs give when pressed on, in Settings › Appearance › Tabs: its press held on to the mouse however far the hand went, so the drag never began and the window moved instead. A tab carried past either end of that row stays in sight instead of being cut off, and one carried off the row or the column goes with the pointer, as its icon and title. Thanks [@kemuri](https://github.com/kemuri) ([#1011](https://github.com/driceroland/Search/pull/1011))
+
+### Changed
+
+- Pages with many frames load quicker with an extension that declares several content scripts: the small script Search gives each extension is read once per frame, not once per script. With 1Password, a page with 20 frames read it 63 times. Thanks [@Chahine-tech](https://github.com/Chahine-tech) ([#1013](https://github.com/driceroland/Search/pull/1013))
+
+### Added
+
+- Your contact details under a form's boxes, from your own card in Contacts, as Safari fills them: under a box for your name, email, phone or address, a row per address, email or number on your card. A click fills that box and the form's other empty boxes you can see, keeping a shipping address and a billing one apart; a shift-click fills that box alone, and the boxes filled flash in your accent colour unless Reduce Motion is on. Boxes a page hides away get nothing. Only your card is read, held in memory and never saved, and nothing reaches the page before you pick. Off unless you turn it on in Settings › Passwords › Fill in your contact details, which is when macOS asks whether Search may read Contacts. Thanks [@kemuri](https://github.com/kemuri) ([#1010](https://github.com/driceroland/Search/pull/1010))
+- Open All in New Tabs at the foot of each folder in the Bookmarks menu, as in Safari, and in a folder opened from the bookmarks bar: the folder's bookmarks, each in a tab of its own. Right-clicking a folder in the bar already offered it.
+
+## 1.0.11 — 9 November 2026
+
+### Fixed
+
+- A window opens with the keys on the page in front, so typing and the arrow keys reach it without a click. With Keyboard navigation on in the Mac's Keyboard settings, Reload took them, with a focus ring around it. Thanks [@kemuri](https://github.com/kemuri) ([#1001](https://github.com/driceroland/Search/pull/1001))
+- ⌘-click on a link opens it in a new tab even on sites that handle clicks themselves. Some shops, Zara Home's for one, opened the product in the same tab, whatever key was held.
+- The floating video no longer flickers as it pops out. Its little window opened on a picture of the video with whatever the page drew over it, the player's controls, its watermark, captions or a dialog, and those vanished a moment later as the live video took over; the picture is now of the video alone, as the window then shows it. Reported by [@Rahuletto](https://github.com/Rahuletto) ([#543](https://github.com/driceroland/Search/issues/543))
+- Closing a window straight after using it, with ⇧⌘W or its red button, no longer takes away the pins of its space in every other window. The window waited a moment before saving its tabs, and a save that came after it had closed found no tabs and told the other windows the space had no pins. `python3 Tests/close_window_pins.py` checks it. Reported in [#750](https://github.com/driceroland/Search/issues/750). Thanks [@tobyL05](https://github.com/tobyL05) ([#983](https://github.com/driceroland/Search/pull/983))
+- A passkey is offered only to the site the tab has open: a page's own request is checked against the address Search shows, as a frame's already was, not only against what the page says it is. Thanks [@pasteley](https://github.com/pasteley) ([#988](https://github.com/driceroland/Search/pull/988))
+- The Mac's system log no longer records which sites you sign in to with a passkey, private tabs included. Thanks [@pasteley](https://github.com/pasteley) ([#989](https://github.com/driceroland/Search/pull/989))
+- A PDF saved from the PDF bar, or a page saved with Save Page As…, is marked as downloaded from the internet, like any other download, so macOS checks it when first opened. Thanks [@pasteley](https://github.com/pasteley) ([#990](https://github.com/driceroland/Search/pull/990))
+- Saved names, passwords and codes are handed to the page's form filler as values, never written into the script that fills the form. Thanks [@pasteley](https://github.com/pasteley) ([#992](https://github.com/driceroland/Search/pull/992))
+- Extensions' WebSockets keep no cookies, so one extension's socket no longer sends what another's was given. Thanks [@pasteley](https://github.com/pasteley) ([#993](https://github.com/driceroland/Search/pull/993))
+
+### Changed
+
+- Search keeps up when many tabs are open. Typing in the address field, swiping between spaces and a background tab changing its title no longer redraw every tab and the menu bar: with 60 tabs a key takes about 7 ms instead of 89, and a swipe step under 5 ms instead of 70. Thanks [@kemuri](https://github.com/kemuri) ([#1000](https://github.com/driceroland/Search/pull/1000))
+- A site shortcut from Settings › Browsing › Searching is offered as a site chip while you type its keyword, like the built-in sites: Tab puts it in the field, and what you type next searches it. Asked for in [#1004](https://github.com/driceroland/Search/issues/1004). Thanks [@ugozlave](https://github.com/ugozlave) ([#1005](https://github.com/driceroland/Search/pull/1005))
+- Show how far you've read is off unless you turn it on, in Settings › Appearance › Tabs: a tab half filled with grey read like a page stuck loading. It stays on for anyone who turned it on themselves. Asked for by [@aminezar](https://github.com/aminezar) ([#994](https://github.com/driceroland/Search/issues/994))
+- The tab column draws no scroll bar when its tabs run past the window, as the tabs across the top already don't, even with macOS set to always show scroll bars. The wheel, the trackpad and the keyboard scroll it as before. Thanks [@TheOmkarBirje](https://github.com/TheOmkarBirje) ([#984](https://github.com/driceroland/Search/pull/984))
+
+### Added
+
+- An HTTP or SOCKS5 proxy for the whole browser, in Settings › Privacy › Proxy, off unless you turn it on. Pages go through it, and so does what Search fetches itself: favicons, suggestions, extensions and the Web Store, the AI add-on and updates, in every space and in private tabs. A video call is the exception: WebRTC sends its own traffic over UDP, which a proxy tunnel doesn't carry. This Mac and .local names stay direct. A proxy that can't be reached fails rather than going direct, and its password is kept in the keychain. Thanks [@Chahine-tech](https://github.com/Chahine-tech) ([#1007](https://github.com/driceroland/Search/pull/1007)), built on [@standby2025](https://github.com/standby2025)'s [#510](https://github.com/driceroland/Search/pull/510)
+- ⌥-click a tab to put it beside the page you're on in Split View, as Open in Split View does: in the column, across the top or on a pin. On the tab you're on, an empty page comes beside it; on a half of the pair on screen, that half leaves. Asked for in [#939](https://github.com/driceroland/Search/issues/939). Thanks [@ubeann](https://github.com/ubeann) ([#1006](https://github.com/driceroland/Search/pull/1006))
+- A pin's page can be changed to the one it is showing: right-click the pin and choose Replace Pinned Page with Current URL. Going back to the pinned page then goes there, in every window. Asked for in [#1002](https://github.com/driceroland/Search/issues/1002). Thanks [@tobyL05](https://github.com/tobyL05) ([#1003](https://github.com/driceroland/Search/pull/1003))
+- Bring Things Over can bring the tabs a Chromium browser has open, Helium, Chrome, Brave, Edge, Arc and the others it lists: turn on Open tabs & tab groups for that browser. They come in asleep at the end of the space you're in, at most 300, its pinned tabs as pins and its tab groups as groups of the same names, folded as they were; tabs already here aren't added twice. Off unless you turn it on. Thanks [@timwuhaotian](https://github.com/timwuhaotian) ([#841](https://github.com/driceroland/Search/pull/841))
+- Send links to a space, as Arc's Air Traffic Control does: a site, its subdomains with it, opens in the space you choose, with that space's sign-ins, when a link to it comes from another app or a page in another space opens it in a new tab; Search switches to that space. Typed addresses, links followed in their own tab and private tabs stay where they are, and a rule whose space has gone is passed over. Off unless you turn it on, in Settings › Spaces & Pins, with Spaces on; add sites there, or right-click a tab for Always Open in this space. `python3 Tests/space_links.py` checks it. Asked for in [#595](https://github.com/driceroland/Search/issues/595) and [#721](https://github.com/driceroland/Search/issues/721). Thanks [@AdityaAmitK](https://github.com/AdityaAmitK), whose [#596](https://github.com/driceroland/Search/pull/596) and [#722](https://github.com/driceroland/Search/pull/722) it is built on
+
+## 1.0.10 — 8 November 2026
+
+### Fixed
+
+- A space's menu says where its downloads go in one Downloads submenu: the folder in Settings or the space's own, ticked, and Choose Folder…. It showed two lines that read alike.
 
 - A muted video now floats when you go to another desktop, as it does when you go to another app; one you paused yourself still stays in its tab. Thanks [@Comradevergreen](https://github.com/Comradevergreen) ([#791](https://github.com/driceroland/Search/pull/791))
 
@@ -167,12 +227,6 @@ in [ROADMAP.md](ROADMAP.md).
 - The key that raised the address field puts it away: ⌘T again closes ⌘T's floating field, ⌘L again closes ⌘L's, and ⌘K pressed afresh closes the switcher, as Spotlight's key does. ⌘K held still steps down the list. ⌘T again used to leave the field up with what was typed cleared, ⌘L again put the address back over an edit, and ⌘K, let go, ⌘K switched to the second tab in the list. What was typed is kept: switching between ⌘T, ⌘L and ⌘K changes only where Return goes, and a ⌘T put away without opening anything comes back with its words, selected. Thanks [@ubeann](https://github.com/ubeann) ([#912](https://github.com/driceroland/Search/pull/912))
 - The downloads button gives one quick pulse each time a new download starts, so a file that comes in fast still shows it began. A button just coming in has its usual scale-in instead, a resume or a retry doesn't pulse, and with Reduce Motion it holds still. Asked for by [@pasteley](https://github.com/pasteley) ([#830](https://github.com/driceroland/Search/issues/830))
 - A search's results page you have been to reads as the search it was in the address field's list, "naruto vs one piece" with Reddit beside it and the mark of a past search, instead of its address (reddit.com/search/?q=naruto%20vs%20one%20piece). It still opens that page, and an address being typed still finishes in grey as before. Your engine's page for exactly what you typed isn't shown twice. Thanks [@ubeann](https://github.com/ubeann) ([#880](https://github.com/driceroland/Search/issues/880), [#889](https://github.com/driceroland/Search/pull/889))
-
-### Held back
-
-Not in this version, kept on main for a later one:
-
-- AI on pages, off unless you turn it on in Settings › AI: Summarize Page and Ask About This Page… in the View menu, answered where you choose — a model downloaded to this Mac (Apple Silicon: Qwen3 1.7B, 1.1 GB, checked before every use and run by a small program of Search's own that can't reach the network or your files), Ollama or LM Studio on this Mac, your own key for Anthropic, OpenAI, Google Gemini or OpenRouter, or signing in with your OpenRouter account. The answer comes in a panel beside the page, in plain text, marked as possibly wrong and with where it ran; follow-up questions stay in the panel, and nothing is kept once it closes. Only the page's visible text goes, never a password, a form or another tab; the page's words are given to the model as something to read, not orders, and any web address, email or phone number in the answer that isn't on the page is pointed out. Keys stay in this Mac's keychain and go only to their provider; a provider off this Mac is shown what it will be sent before the first request, and a private tab uses only what runs on this Mac.
 
 ## 1.0.9 — 4 November 2026
 

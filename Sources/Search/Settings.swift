@@ -327,6 +327,11 @@ struct SettingsPanel: View {
             GroupBlock(title: "Shortcuts", icon: "command") {
                 ShortcutsPage(browser: browser, store: .shared, prefs: prefs)
             }
+        case .privacy:
+            groups(of: page)
+            GroupBlock(title: "Proxy", icon: "network") {
+                ProxySettings()
+            }
         case .extensions:
             ExtensionsPage(browser: browser)
         case .ai:
@@ -510,6 +515,7 @@ struct SettingsPanel: View {
                         set: { layout in withAnimation(Motion.glide) { prefs.tabsLayout = layout } }
                      ))
         case "sidebar.hides": Switch(on: $prefs.sideHides)
+        case "sidebar.foldIcons": Switch(on: $prefs.foldsToIcons)
         case "layout.cards":
             Pictures(options: [(true, "As a card", AnyView(CardPicture(card: true))),
                                (false, "Edge to edge", AnyView(CardPicture(card: false)))],
@@ -661,6 +667,7 @@ struct SettingsPanel: View {
         case "spaces": Switch(on: $prefs.usesSpaces)
         case "profiles": Pill("New Profile…") { ProfileMenu.askNew() }
         case "profiles.oneWindow": Switch(on: $prefs.profilesInOneWindow)
+        case "spaces.links": Switch(on: $prefs.sendsLinksToSpaces)
         case "pins.keep": Switch(on: $prefs.pinsKeepSite)
         case "pins.list": Switch(on: $prefs.listsPins)
         case "newtab.floating": Switch(on: $prefs.floatingNewTab)
@@ -680,6 +687,23 @@ struct SettingsPanel: View {
         case "passwords.fill": Switch(on: $prefs.fillsPasswords)
         case "passkeys": Switch(on: $prefs.passkeys)
         case "passwords.apple": Switch(on: $prefs.applePasswords)
+        // Turned on, macOS is asked whether Search may read Contacts; a no,
+        // or no card of yours, leaves it off and says why.
+        case "contacts.fill":
+            Switch(on: Binding(get: { prefs.fillsContacts }, set: { on in
+                guard on else { prefs.fillsContacts = false; return }
+                Task { @MainActor in
+                    guard await MeCard.shared.ask() else {
+                        browser.announce("Search may not read Contacts: System Settings › Privacy & Security › Contacts")
+                        return
+                    }
+                    guard await MeCard.shared.reload() else {
+                        browser.announce("No card of yours in Contacts: pick yours there, then Card › Make This My Card")
+                        return
+                    }
+                    prefs.fillsContacts = true
+                }
+            }))
         case "shield": Switch(on: $prefs.shielded)
         case "sites.keep": Switch(on: Binding(get: { !prefs.keepsSignIns }, set: { prefs.keepsSignIns = !$0 }))
         case "privacy.clickIDs": Switch(on: $prefs.removesClickIDs)
@@ -767,6 +791,11 @@ struct SettingsPanel: View {
         case "profiles":
             if !searched {
                 ProfileList(browser: browser)
+                    .under()
+            }
+        case "spaces.links":
+            if !searched, prefs.usesSpaces, prefs.sendsLinksToSpaces {
+                SpaceRouteList(prefs: prefs)
                     .under()
             }
         case "pages.120":

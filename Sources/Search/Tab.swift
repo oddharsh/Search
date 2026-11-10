@@ -93,6 +93,9 @@ enum Web {
         // cookies, its own sign-ins, and nothing left behind when it closes.
         // With spaces on, each space's tabs share a store of that space's.
         config.websiteDataStore = store ?? (shy ? .nonPersistent() : MainActor.assumeIsolated { Spaces.store(for: space ?? Spaces.current) })
+        // A private tab's store is made right here and is in no list, so the
+        // proxy is put on it here too, or a private tab alone would go direct.
+        if shy { let own = config.websiteDataStore; MainActor.assumeIsolated { BrowserProxy.shared.attach(own) } }
         // Web notifications go through the store (see Notifications.swift);
         // a private tab's is left without, and a page there is refused.
         if !shy { let kept = config.websiteDataStore; MainActor.assumeIsolated { SiteNotifications.shared.attach(kept) } }
@@ -252,6 +255,11 @@ final class Reading: ObservableObject {
     @Published var value: Double = 0
 }
 
+/// A tab's sideways swipe, for its disc alone (see `Tab.pulling`).
+final class Pulling: ObservableObject {
+    @Published var pull: Pull?
+}
+
 /// The fill itself: the grey that grows from the left of the tab you are on
 /// as you read down its page, in a width it is given.
 struct ReadingFill: View {
@@ -281,7 +289,13 @@ final class Tab: ObservableObject, Identifiable {
     }
     /// The web view if there is one yet, for the callers that must not be
     /// the reason there is.
-    private(set) var built: PageView?
+    private(set) var built: PageView? {
+        didSet { contentController = built?.configuration.userContentController }
+    }
+    /// The page's scripts and rules, kept from when it was built: a web
+    /// view's `configuration` is a copy made afresh at every reading, which
+    /// cost more than everything else done at a link followed.
+    private(set) var contentController: WKUserContentController?
     private var configuration: WKWebViewConfiguration
     let extensionReturn = ExtensionReturnNavigation()
 
@@ -373,7 +387,6 @@ final class Tab: ObservableObject, Identifiable {
         address = url
         failure = nil
     }
-    @Published private(set) var progress: Double = 0
     @Published private(set) var loading = false
     @Published private(set) var canGoBack = false
     @Published private(set) var canGoForward = false
@@ -488,11 +501,11 @@ final class Tab: ObservableObject, Identifiable {
     }
 
     func adoptIcon() {
-        if let page {
-            icon = page.glyph
-            return
-        }
-        icon = Favicons.shared.cached(for: address, shy: shy)
+        // Set only when it is another picture: each setting draws this tab's
+        // row again, and an icon arriving for a site sets it on every tab of
+        // that site in every window.
+        let new = page.map(\.glyph) ?? Favicons.shared.cached(for: address, shy: shy)
+        if icon !== new { icon = new }
     }
 
     /// True while the caret is in something on the page that takes typing.
@@ -512,8 +525,14 @@ final class Tab: ObservableObject, Identifiable {
     /// True while this tab's page is out in the little window.
     @Published var floating = false
 
-    /// A sideways swipe in progress, for the disc that shows it.
-    @Published var pull: Pull?
+    /// A sideways swipe in progress, for the disc that shows it. Kept apart
+    /// from the rest of the tab, as the meter is: it changes with every event
+    /// of the swipe, and only the disc has any use for it.
+    let pulling = Pulling()
+    var pull: Pull? {
+        get { pulling.pull }
+        set { pulling.pull = newValue }
+    }
 
     /// What going back from the first page does, for a tab where it does
     /// anything (see PageView.leave).
@@ -596,7 +615,17 @@ final class Tab: ObservableObject, Identifiable {
     /// is, in the web view's points, or nil when it has left. Then whether
     /// it goes with a password, and whether it is a first step's name box,
     /// which takes the name alone.
-    var onField: ((Tab, CGRect?, Bool, Bool, Bool, Bool) -> Void)?
+    /// Then whether it is a box for a verification code.
+    /// Last, what else the box takes that Search can fill (Fill), if not a
+    /// sign-in.
+    var onField: ((Tab, CGRect?, Bool, Bool, Bool, Bool, Fill?) -> Void)?
+    /// A box that takes something other than a sign-in.
+    enum Fill: Equatable {
+        /// A detail on your own card in Contacts (MeCard): its kind, as
+        /// autocomplete names it ("email", "postal-code"…), and the page's
+        /// number for the box, which a pick has to find the caret still in.
+        case contact(String, box: Int)
+    }
     /// The site the sign-in was sent from — not the one it landed on —
     /// then the name and the password, and whether that page came over
     /// plain http.
@@ -618,7 +647,9 @@ final class Tab: ObservableObject, Identifiable {
     var onStoreAdd: ((Tab) -> Void)?
     /// The middle button was let go over a link. The browser opens it in a
     /// tab of its own beside this one, without leaving the page you are on.
-    var onMiddleClick: ((Tab, URL) -> Void)?
+    /// ⌘-click on a link the page would have kept for itself: the same,
+    /// in front when ⇧ was held too (see MiddleRelay).
+    var onMiddleClick: ((Tab, URL, Bool) -> Void)?
     /// A page on this Mac's link to another file, clicked: here, or in a
     /// tab of its own for target="_blank" (see MiddleRelay).
     var onFileLink: ((Tab, URL, Bool) -> Void)?
@@ -832,7 +863,6 @@ final class Tab: ObservableObject, Identifiable {
             cover = nil
             failure = nil
             loading = false
-            progress = 0
             reader = false
             behind = nil
             trail = []
@@ -989,9 +1019,6 @@ final class Tab: ObservableObject, Identifiable {
                     if self.dusked, !moved { self.built?.evaluateInSearch("window.__officeDusk && window.__officeDusk.again()") }
                 }
             },
-            web.observe(\.estimatedProgress, options: [.new]) { [weak self] _, _ in
-                MainActor.assumeIsolated { self?.progress = self?.built?.estimatedProgress ?? 0 }
-            },
             web.observe(\.isLoading, options: [.new]) { [weak self] _, _ in
                 MainActor.assumeIsolated { self?.loading = self?.built?.isLoading ?? false }
             },
@@ -1067,124 +1094,94 @@ final class Tab: ObservableObject, Identifiable {
     /// answer over, and nothing at all to a page that isn't to be darkened.
     func arm(hiding css: String, to url: URL? = nil) {
         veils = css
-        guard let built else { return }
-        let controller = built.configuration.userContentController
-        controller.removeAllUserScripts()
-        controller.addUserScript(PopupGestureRelay.userScript)
-        controller.addUserScript(
-            WKUserScript(source: ScrollRelay.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: Web.world)
-        )
+        guard let controller = contentController else { return }
+        var scripts: [WKUserScript] = []
+        func add(_ source: String, _ time: WKUserScriptInjectionTime, mainFrameOnly: Bool, in world: WKContentWorld,
+                 line: UInt = #line) {
+            scripts.append(Armed.script(source, time, mainFrameOnly: mainFrameOnly, in: world, line: line))
+        }
+        add(PopupGestureRelay.script, .atDocumentStart, mainFrameOnly: false, in: Web.world)
+        add(ScrollRelay.script, .atDocumentEnd, mainFrameOnly: true, in: Web.world)
         // At the start, so its pageshow runs ahead of the page's own
         // (see KeptScroll.swift).
-        controller.addUserScript(
-            WKUserScript(source: KeptScroll.script, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Web.world)
-        )
-        controller.addUserScript(
-            WKUserScript(source: Veiling.picker, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Web.world)
-        )
-        controller.addUserScript(
-            WKUserScript(source: FormRelay.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: Web.world)
-        )
-        controller.addUserScript(
-            WKUserScript(source: IconRelay.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: Web.world)
-        )
+        add(KeptScroll.script, .atDocumentStart, mainFrameOnly: true, in: Web.world)
+        add(Veiling.picker, .atDocumentStart, mainFrameOnly: true, in: Web.world)
+        add(FormRelay.script, .atDocumentEnd, mainFrameOnly: true, in: Web.world)
+        // The form script looks at boxes for your card only with Fill in
+        // your contact details on.
+        if FormRelay.contacts {
+            add(FormRelay.contactsOn, .atDocumentStart, mainFrameOnly: true, in: Web.world)
+        }
+        add(IconRelay.script, .atDocumentEnd, mainFrameOnly: true, in: Web.world)
         if AutoScroll.on {
-            controller.addUserScript(
-                WKUserScript(source: AutoScroll.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: Web.world)
-            )
+            add(AutoScroll.script, .atDocumentEnd, mainFrameOnly: true, in: Web.world)
         }
         // Every frame: a swipe over an embedded map is the map's, and only the
         // map's own document can say so.
-        controller.addUserScript(
-            WKUserScript(source: Swipe.watch, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: Web.world)
-        )
-        controller.addUserScript(
-            WKUserScript(source: ImageRelay.watch, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: Web.world)
-        )
+        add(Swipe.watch, .atDocumentStart, mainFrameOnly: false, in: Web.world)
+        add(ImageRelay.watch, .atDocumentStart, mainFrameOnly: false, in: Web.world)
         // Every frame, in Search's world: a paused video gives the media keys
         // back (see MediaKeys.swift).
-        controller.addUserScript(
-            WKUserScript(source: MediaKeys.watch, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: Web.world)
-        )
+        add(MediaKeys.watch, .atDocumentStart, mainFrameOnly: false, in: Web.world)
         // The main frame, where the float looks: a video WebKit paused as
         // the page went out of sight still floats (see Isolate.watch).
-        controller.addUserScript(
-            WKUserScript(source: Isolate.watch, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Web.world)
-        )
+        add(Isolate.watch, .atDocumentStart, mainFrameOnly: true, in: Web.world)
         // The store's "Add to Search" only where Search can add extensions.
         // Before macOS 15.4 it was drawn all the same, and pressing it did
         // nothing at all; Settings › Extensions says what they need instead.
         if #available(macOS 15.4, *) {
-            controller.addUserScript(
-                WKUserScript(source: StoreRelay.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: Web.world)
-            )
+            add(StoreRelay.script, .atDocumentEnd, mainFrameOnly: true, in: Web.world)
         }
         // Only while Settings says so: off, pages get nothing at all.
         if HoveredLink.on {
-            controller.addUserScript(WKUserScript(
-                source: HoveredLink.script, injectionTime: .atDocumentStart,
-                forMainFrameOnly: false, in: .defaultClient
-            ))
+            add(HoveredLink.script, .atDocumentStart, mainFrameOnly: false, in: .defaultClient)
         }
         // The main frame only: a middle-click on a link inside an ad iframe is
         // that frame's own business, and its link is not this tab's to open.
-        controller.addUserScript(
-            WKUserScript(source: MiddleRelay.watch, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Web.world)
-        )
+        add(MiddleRelay.watch, .atDocumentStart, mainFrameOnly: true, in: Web.world)
         // Every frame, in the page's own world and ahead of its scripts: a
         // live player's speed nudges go through it (see LiveRate.swift).
-        controller.addUserScript(
-            WKUserScript(source: LiveRate.script, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: .page)
-        )
+        add(LiveRate.script, .atDocumentStart, mainFrameOnly: false, in: .page)
         // Every frame, in the page's own world: a page an extension lists
         // reaches it as chrome.runtime (see ExtensionExternal.swift).
         if let external = ExtensionExternal.script {
-            controller.addUserScript(
-                WKUserScript(source: external, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: .page)
-            )
+            add(external, .atDocumentStart, mainFrameOnly: false, in: .page)
         }
         // Passkeys stand in the page's own world — they replace the page's
         // functions — and reach Search through a bridge in Search's, off or on:
         // an extension's page script can carry the patch either way (see
         // Passkeys.swift and ExtensionShims.passkeys).
         if !FormRelay.passkeysOffered {
-            controller.addUserScript(
-                WKUserScript(source: FormRelay.withoutPasskeys, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: .page)
-            )
+            add(FormRelay.withoutPasskeys, .atDocumentStart, mainFrameOnly: false, in: .page)
         } else {
-            controller.addUserScript(
-                WKUserScript(source: PasskeyRelay.page, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: .page)
-            )
+            add(PasskeyRelay.page, .atDocumentStart, mainFrameOnly: false, in: .page)
         }
-        controller.addUserScript(
-            WKUserScript(source: PasskeyRelay.bridge, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: Web.world)
-        )
+        add(PasskeyRelay.bridge, .atDocumentStart, mainFrameOnly: false, in: Web.world)
         // Every frame but the top, only while Translate Page is switched on:
         // a frame of another site says it's there, to be translated too.
         if PageTranslator.enabled {
-            controller.addUserScript(
-                WKUserScript(source: PageTranslator.announce, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: Web.world)
-            )
+            add(PageTranslator.announce, .atDocumentEnd, mainFrameOnly: false, in: Web.world)
         }
         // Only while it is on and not paused: otherwise pages get nothing
         // (see Dusk.swift). Before the document, so a site known to be light
         // is never seen white. Every frame: a frame darkens its own document,
         // led by its page.
         if let dusk = Dusk.shared.script(for: Dusk.host(of: url ?? pageAddress)) {
-            controller.addUserScript(
-                WKUserScript(source: dusk, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: Web.world)
-            )
+            add(dusk, .atDocumentStart, mainFrameOnly: false, in: Web.world)
         }
         // YouTube's ads, while Shield is on for the site this tab is on
         // (see YouTubeAds.swift). Every frame; each script does nothing in a
         // frame that isn't YouTube's.
-        for script in YouTubeAds.scripts(for: Dusk.host(of: url ?? pageAddress)) {
-            controller.addUserScript(script)
+        scripts += YouTubeAds.scripts(for: Dusk.host(of: url ?? pageAddress))
+        if !css.isEmpty {
+            add(Veiling.style(css), .atDocumentStart, mainFrameOnly: true, in: Web.world)
         }
-        guard !css.isEmpty else { return }
-        controller.addUserScript(
-            WKUserScript(source: Veiling.style(css), injectionTime: .atDocumentStart, forMainFrameOnly: true, in: Web.world)
-        )
+        // The same scripts as the document before's, the usual case, are
+        // left where they are: taken out and put back, every one was sent to
+        // the page's process again on every link followed.
+        guard !controller.userScripts.elementsEqual(scripts, by: ===) else { return }
+        controller.removeAllUserScripts()
+        scripts.forEach(controller.addUserScript)
     }
 
     /// The same stylesheet, for the page that is already up.
@@ -1212,16 +1209,16 @@ final class Tab: ObservableObject, Identifiable {
     /// host's own.
     /// `code`: a box for a verification code, which takes nothing of a
     /// sign-in's.
-    func fieldFocused(_ rect: CGRect?, passwords: Bool = true, name: Bool = false, wide: Bool = true, code: Bool = false) {
+    func fieldFocused(_ rect: CGRect?, passwords: Bool = true, name: Bool = false, wide: Bool = true, code: Bool = false, fill: Fill? = nil) {
         guard let rect else {
-            onField?(self, nil, false, false, false, false)
+            onField?(self, nil, false, false, false, false, nil)
             return
         }
         let zoom = built?.pageZoom ?? 1
         onField?(self, CGRect(
             x: rect.minX * zoom, y: rect.minY * zoom,
             width: rect.width * zoom, height: rect.height * zoom
-        ), passwords, name, wide, code)
+        ), passwords, name, wide, code, fill)
     }
 
     /// The name a sign-in that asks for it first was just sent, for the
@@ -1322,40 +1319,69 @@ final class Tab: ObservableObject, Identifiable {
     /// it is still that scheme and host: a document that changed after the
     /// last check on this side gets nothing.
     func fill(user: String, password: String, onlyOn page: URL? = nil, done: ((Bool) -> Void)? = nil) {
-        guard let still = stillOn(page) else { done?(false); return }
-        web.evaluateInSearch(
-            "\(still)window.__officeForms && window.__officeForms.fill(`\(escape(user))`, `\(escape(password))`)"
-        ) { result in
-            done?((result as? Bool) ?? false)
-        }
+        callForms("fill(user, password)", ["user": user, "password": password], onlyOn: page, done: done)
     }
 
     /// A verification code, into the box it was offered under, on that page
     /// alone (see `fill`).
     func fillCode(_ code: String, onlyOn page: URL, done: ((Bool) -> Void)? = nil) {
-        guard let still = stillOn(page) else { done?(false); return }
-        web.evaluateInSearch(
-            "\(still)window.__officeForms && window.__officeForms.code(`\(escape(code))`)"
-        ) { result in
-            done?((result as? Bool) ?? false)
-        }
-    }
-
-    /// The page's own check that it is still that scheme and host: "" for no
-    /// page to check, nil for a page that can't be checked.
-    private func stillOn(_ page: URL?) -> String? {
-        guard let page else { return "" }
-        guard let scheme = page.scheme?.lowercased(), let host = page.host()?.lowercased() else { return nil }
-        return "location.protocol === `\(escape(scheme)):` && location.hostname.toLowerCase() === `\(escape(host))` && "
+        callForms("code(code)", ["code": code], onlyOn: page, done: done)
     }
 
     /// A first step's name alone, picked from the accounts under its box.
     func fillName(_ user: String, done: ((Bool) -> Void)? = nil) {
-        web.evaluateInSearch(
-            "window.__officeForms && window.__officeForms.name(`\(escape(user))`)"
-        ) { result in
-            done?((result as? Bool) ?? false)
+        callForms("name(user)", ["user": user], onlyOn: nil, done: done)
+    }
+
+    /// One of the page script's calls, its values handed over as arguments,
+    /// never written into the source. With a page, the script first checks
+    /// it is still that scheme and host; a page that can't be checked gets
+    /// nothing.
+    private func callForms(_ call: String, _ values: [String: Any], onlyOn page: URL?, done: ((Bool) -> Void)?) {
+        var arguments = values.merging(["scheme": "", "host": ""]) { own, _ in own }
+        if let page {
+            guard let scheme = page.scheme?.lowercased(), let host = page.host()?.lowercased() else { done?(false); return }
+            arguments["scheme"] = scheme + ":"
+            arguments["host"] = host
         }
+        web.callInSearch("""
+            if (scheme && (location.protocol !== scheme || location.hostname.toLowerCase() !== host)) return false;
+            return !!(window.__officeForms && window.__officeForms.\(call));
+            """, arguments: arguments) { done?(($0 as? Bool) ?? false) }
+    }
+
+    /// Your card's details, picked from under a box for one, into the
+    /// boxes of its form: `fields` by kind, as autocomplete names them.
+    /// `done` hears whether any box took one. `alone`: the box with the
+    /// caret only, not the rest of its form. `box`: the page's number for
+    /// the box the list hung from. `onlyOn`: the page the list was made
+    /// for, whose origin, port and all, the page has to still be. `flash`:
+    /// the boxes it fills flash in the accent colour (MeCard.tint).
+    func fillContact(_ fields: [String: String], alone: Bool = false, box: Int? = nil, onlyOn page: URL? = nil,
+                     flash: Bool = false, done: ((Bool) -> Void)? = nil) {
+        var origin = ""
+        if let page {
+            guard let known = Self.origin(of: page) else { done?(false); return }
+            origin = known
+        }
+        let tint: Any = flash ? MeCard.tint : NSNull()
+        web.callInSearch("""
+            if (origin && location.origin !== origin) return false;
+            return !!(window.__officeForms && window.__officeForms.contact(card, alone, box, tint) > 0);
+            """, arguments: ["origin": origin, "card": fields, "alone": alone, "box": box.map { $0 as Any } ?? NSNull(), "tint": tint]) {
+            done?(($0 as? Bool) ?? false)
+        }
+    }
+
+    /// A page's origin as the page itself gives it (location.origin):
+    /// scheme and host, and the port only when it isn't the scheme's own.
+    nonisolated static func origin(of url: URL?) -> String? {
+        guard let url, let scheme = url.scheme?.lowercased(), let host = url.host(percentEncoded: true)?.lowercased(),
+              !host.isEmpty
+        else { return nil }
+        let bracketed = host.contains(":") && !host.hasPrefix("[") ? "[\(host)]" : host
+        let port = url.port.flatMap { (scheme == "https" && $0 == 443) || (scheme == "http" && $0 == 80) ? nil : $0 }
+        return "\(scheme)://\(bracketed)" + (port.map { ":\($0)" } ?? "")
     }
 
     func picked(selector: String, label: String, note: String) {
@@ -2134,6 +2160,24 @@ final class MiddleRelay: NSObject, WKScriptMessageHandler {
           if (!e.defaultPrevented) window.webkit.messageHandlers.officeMiddle.postMessage({ href: href });
         }, 0);
       }, true);
+      // ⌘-click on a link: a tab of its own, whatever the page does with
+      // the click. Some shops (Zara Home's grid, for one) take every click
+      // on a product for their own router and never look at ⌘, so the page
+      // went where you were. Taken here, on the way down, before them —
+      // only a link to the web that leaves this page: a link to "#" is a
+      // button in disguise, and keeps doing what the page makes it do.
+      // ⇧ as well brings the new tab to the front, as in every browser.
+      window.addEventListener('click', function (e) {
+        if (e.button !== 0 || !e.isTrusted || !e.metaKey || e.ctrlKey || e.altKey) return;
+        var a = anchor(e);
+        if (!a || a.hasAttribute('download')) return;
+        var href = link(e);
+        if (!/^https?:/i.test(href)) return;
+        if (href.split('#')[0] === location.href.split('#')[0]) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        window.webkit.messageHandlers.officeMiddle.postMessage({ href: href, front: e.shiftKey });
+      }, true);
       // A page on this Mac linking to another file. WebKit lets a file page
       // read only its own folder, and drops a click on a link out of it
       // before Search is asked: the page stayed where it was, and only the
@@ -2208,9 +2252,10 @@ final class MiddleRelay: NSObject, WKScriptMessageHandler {
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https"
         else { return }
+        let front = body["front"] as? Bool ?? false
         MainActor.assumeIsolated { [weak self] in
             guard let self, let tab else { return }
-            tab.onMiddleClick?(tab, url)
+            tab.onMiddleClick?(tab, url, front)
         }
     }
 }
@@ -3223,6 +3268,14 @@ extension WKWebView {
             then?(try? result.get())
         }
     }
+
+    /// As `evaluateInSearch`, for a function body: `arguments` arrive as
+    /// its named parameters, so what they hold is never part of the source.
+    func callInSearch(_ body: String, arguments: [String: Any], then: ((Any?) -> Void)? = nil) {
+        callAsyncJavaScript(body, arguments: arguments, in: nil, in: Web.world) { result in
+            then?(try? result.get())
+        }
+    }
 }
 
 /// A page's process dying again and again: made again twice a minute at
@@ -3271,5 +3324,32 @@ enum PageEnd: Int {
         case .memory: return "This page kept running out of memory."
         default: return "This page kept crashing."
         }
+    }
+}
+
+/// The scripts `Tab.arm` puts in a page, made once for each source and kept:
+/// a page's next document usually gets exactly the ones its last one did,
+/// and the same objects are what let `arm` see that and leave them be. Kept
+/// by the line that asks for them, with the source alongside: hashing every
+/// source to look it up cost as much as making the scripts again.
+@MainActor
+enum Armed {
+    private struct Place: Hashable {
+        let file: UInt
+        let line: UInt
+        let start: Bool
+        let mainFrameOnly: Bool
+        let world: ObjectIdentifier
+    }
+    private static var made: [Place: (source: String, script: WKUserScript)] = [:]
+
+    static func script(_ source: String, _ time: WKUserScriptInjectionTime, mainFrameOnly: Bool, in world: WKContentWorld,
+                       file: StaticString = #fileID, line: UInt = #line) -> WKUserScript {
+        let place = Place(file: UInt(bitPattern: file.utf8Start), line: line, start: time == .atDocumentStart,
+                          mainFrameOnly: mainFrameOnly, world: ObjectIdentifier(world))
+        if let kept = made[place], kept.source == source { return kept.script }
+        let script = WKUserScript(source: source, injectionTime: time, forMainFrameOnly: mainFrameOnly, in: world)
+        made[place] = (source, script)
+        return script
     }
 }
