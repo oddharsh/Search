@@ -174,6 +174,10 @@ final class Extensions: NSObject, ObservableObject {
             ? .init(identifier: Store.probeStore(2))
             : .default()
         configuration.defaultWebsiteDataStore = Store.websites
+        // Taken straight from Store, not through Profiles.store, so the proxy
+        // is put on it here: an extension's pages would otherwise fetch
+        // directly until the first ordinary tab was made (Proxy.swift).
+        BrowserProxy.shared.attach(Store.websites)
         let views = configuration.webViewConfiguration ?? WKWebViewConfiguration()
         // Its own configuration starts with WebKit's default store; an
         // extension's pages keep what they store where the browser does —
@@ -1219,7 +1223,7 @@ final class Extensions: NSObject, ObservableObject {
             URLQueryItem(name: "x", value: "id=\(item.id)&v=\(item.version)&uc"),
         ]
         guard let url = parts.url,
-              let (data, _) = try? await URLSession.shared.data(from: url),
+              let (data, _) = try? await ProxyNetwork.session.data(from: url),
               let xml = String(data: data, encoding: .utf8),
               // The answer is the <updatecheck> element alone: status="ok"
               // with a version when there is a newer one, "noupdate" when
@@ -1404,7 +1408,13 @@ final class Extensions: NSObject, ObservableObject {
     /// writes nativeMessaging into every one for its own line
     /// (ExtensionShims.prepare), and notes it in .search-added, so what it
     /// added there doesn't count as asked.
+    ///
+    /// Read once for each loaded package: it was read off the disk and parsed
+    /// for every message and port to an app. A package loaded again (an
+    /// update, a reload) is a new WKWebExtension, and is read again.
     static func asksForNative(_ context: WKWebExtensionContext) -> Bool {
+        let package = context.webExtension
+        if let known = nativeAsked[context.uniqueIdentifier], known.package === package { return known.asks }
         let folder = Extensions.folder(for: context.uniqueIdentifier)
         let added = Set((try? JSONSerialization.jsonObject(with: Data(contentsOf: folder.appendingPathComponent(".search-added")))) as? [String] ?? [])
         let required = context.webExtension.requestedPermissions.contains(.nativeMessaging) && !added.contains("nativeMessaging")
@@ -1417,8 +1427,16 @@ final class Extensions: NSObject, ObservableObject {
         // optional_permissions is the extension's own, left as it ships, as
         // permissions.request already reads it.
         let optional = Set(((context.webExtension.manifest["optional_permissions"] as? [Any]) ?? []).compactMap { $0 as? String })
-        return required || optional.contains("nativeMessaging")
+        let asks = required || optional.contains("nativeMessaging")
+        nativeAsked[context.uniqueIdentifier] = NativeAsked(package: package, asks: asks)
+        return asks
     }
+    private final class NativeAsked {
+        weak var package: WKWebExtension?
+        let asks: Bool
+        init(package: WKWebExtension, asks: Bool) { self.package = package; self.asks = asks }
+    }
+    private static var nativeAsked: [String: NativeAsked] = [:]
 
     /// Whether this address is a page of an extension other than the one
     /// asking — which it never gets to see into.

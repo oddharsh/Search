@@ -239,20 +239,21 @@ struct SideBar: View {
 
     private var pages: some View {
         let width = self.width
-        let swipe = browser.spaceSwipe
+        let swipe = browser.spaceSwipeSide
+        let offset = browser.spaceSwipeOffset
         let at = spaceAt
         return ZStack(alignment: .topLeading) {
             page(at, pill: pill)
-                .offset(x: swipe)
+                .modifier(SwipeShift(offset: offset, across: true))
             // Only while the fingers are bringing one in: the one they are
             // bringing, a page's width away.
             if swipe > 0, at > 0 {
                 page(at - 1, pill: before)
-                    .offset(x: swipe - width)
+                    .modifier(SwipeShift(offset: offset, by: -width, across: true))
             }
             if swipe < 0, browser.drawsPage(after: at) {
                 page(at + 1, pill: after)
-                    .offset(x: swipe + width)
+                    .modifier(SwipeShift(offset: offset, by: width, across: true))
             }
         }
         // The pages are the column's whole width, each with its own margin.
@@ -304,21 +305,15 @@ struct SideBar: View {
                             }
                         } else {
                             ScrollViewReader { proxy in
-                                // The scroll view reaches into the margin on
-                                // the right and the rows keep it inside, so the
-                                // system's bar lands in the margin beside them
-                                // rather than over the cross on the tab under the
-                                // pointer. The column's edge lies over that margin
-                                // and answers first, so the bar never fights the
-                                // resize; the wheel and the trackpad still scroll.
-                                ScrollView(.vertical) {
-                                    rows.padding(.trailing, 10)
-                                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                                            room.drawn = $0
-                                            refit()
-                                        }
+                                // Without scroll indicators: the tab column stays quiet
+                                // and distraction-free, matching other vertical-tab browsers.
+                                // The wheel and the trackpad still scroll smoothly.
+                                ScrollView(.vertical, showsIndicators: false) {
+                                    rows.onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                                        room.drawn = $0
+                                        refit()
+                                    }
                                 }
-                                .padding(.trailing, -10)
                                 // The tab you go to is the tab you see — ⌘1–⌘9,
                                 // ⇧⌘], a link opening beside the one on screen.
                                 .onChange(of: browser.activeID) { _, id in
@@ -1075,11 +1070,12 @@ private struct PinSquare: View {
             browser.select(tab)
         })
         .modifier(OneClick(double: live) {
-            guard !selectedOnPress, NSEvent.modifierFlags.intersection([.command, .shift]).isEmpty else { return }
+            guard !selectedOnPress, TabClick.flags.intersection([.command, .shift, .option]).isEmpty else { return }
             browser.clearTabSelection()
             if live { browser.goHome(tab) } else { browser.select(tab) }
         })
         .modifier(ModifiedTabClick { browser.extendTabSelection(to: tab, modifiers: $0) })
+        .modifier(OptionClick { if browser.editingPin != tab.id { browser.optionClick(tab) } })
         // Put down, like ⌘W: close() is what knows a pin isn't removed.
         .overlay { MiddleClick { browser.close(tab) } }
         .onHover { hovering = $0 }
@@ -1259,11 +1255,12 @@ private struct SideRow: View {
         .modifier(Give(pressed: pressed && prefs.tabsGive))
         .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .modifier(OneClick(double: false) {
-            guard interactive, !selectedOnPress, NSEvent.modifierFlags.intersection([.command, .shift]).isEmpty else { return }
+            guard interactive, !selectedOnPress, TabClick.flags.intersection([.command, .shift, .option]).isEmpty else { return }
             browser.clearTabSelection()
             if live { browser.beginTabEdit(tab) } else { browser.select(tab) }
         })
         .modifier(ModifiedTabClick { if interactive && !editing { browser.extendTabSelection(to: tab, modifiers: $0) } })
+        .modifier(OptionClick { if interactive && !editing { browser.optionClick(tab) } })
         .overlay { if interactive { MiddleClick(act: close) } }
         .onHover(perform: hover)
         .onAppear { if interactive { Bench.rowAppeared(tab.id, hover: hover) } }

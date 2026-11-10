@@ -84,6 +84,7 @@ enum SettingsIndex {
 
         .init(id: "passwords", page: .passwords, title: "Your passwords", icon: "key"),
         .init(id: "apple", page: .passwords, title: "Apple Passwords", icon: "lock.rectangle.stack"),
+        .init(id: "forms", page: .passwords, title: "Filling in forms", icon: "character.cursor.ibeam"),
 
         .init(id: "blocking", page: .privacy, title: "Blocking", icon: "shield"),
         .init(id: "permissions", page: .privacy, title: "Site permissions", icon: "checkmark.shield"),
@@ -143,6 +144,11 @@ enum SettingsIndex {
         .init(id: "sidebar.hides", group: "window", icon: "sidebar.squares.left",
               title: "Hide the column until the pointer reaches the edge", detail: "The page takes the whole window; ⌘S keeps the tabs out",
               keys: ["sidebar.hides"], words: ["auto hide", "sidebar"], parent: "tabs.layout"),
+        .init(id: "sidebar.foldIcons", group: "window", icon: "arrow.down.right.and.arrow.up.left",
+              title: "⌘S makes the column icons only", detail: "The tabs stay in sight as a narrow column of icons; ⌘S again brings the titles back",
+              more: "Off, ⌘S hides the column and the page takes the whole window.",
+              keys: ["sidebar.foldIcons"], words: ["collapse", "collapsed", "compact", "narrow", "hide sidebar", "icons only", "favicons"],
+              parent: "tabs.layout"),
         .init(id: "layout.cards", group: "window", icon: "rectangle.inset.filled",
               title: "The page as a card", detail: "A little room around the page, with rounded corners",
               more: "Off, the page reaches the window's edges and the column is white with its hairline.",
@@ -291,6 +297,12 @@ enum SettingsIndex {
               title: "Profiles in one window", detail: "Every profile's spaces in one window, switched in place",
               more: "Choosing a space of another profile brings that profile's window into this one's place, so each keeps its own sign-ins. Closing it closes them all.",
               keys: ["profiles.oneWindow"], words: ["arc", "profiles", "single window", "merge"], parent: "profiles"),
+        .init(id: "spaces.links", group: "spaces", icon: "arrow.triangle.branch",
+              title: "Send links to a space", detail: "Links to sites you choose open in their space, with its sign-ins",
+              more: "Links from other apps, and links a page in another space opens in a new tab. A site includes its subdomains. Typed addresses, links followed in their own tab and private tabs stay where they are. Right-click a tab to send its site to the space it is in.",
+              keys: [SpaceRoutes.key, SpaceRoutes.rulesKey],
+              words: ["arc", "air traffic control", "route", "routing", "rules", "domain", "site", "open in space", "default space", "links from other apps"],
+              parent: "spaces"),
         .init(id: "pins.keep", group: "pins", icon: "pin.circle",
               title: "Pins keep their site", detail: "Links elsewhere open over the pin, and ⌘W takes it back home",
               more: "As in Arc and Safari: a link from a pin to another site opens in a peek over it, and a pin closed with ⌘W, or left open when Search quits, comes back at the page it was pinned at.",
@@ -331,6 +343,10 @@ enum SettingsIndex {
               title: "Passwords from Apple's Passwords app", detail: "Your Passwords app's accounts and verification codes under their box. Unofficial",
               more: "Search talks to the helper Apple made for its Chrome extension, as that extension. Never in private tabs.",
               keys: ["passwords.apple"], words: ["icloud keychain", "apple"]),
+        .init(id: "contacts.fill", group: "forms", icon: "person.crop.rectangle",
+              title: "Fill in your contact details", detail: "Your card in Contacts under name, email, phone and address boxes",
+              more: "A click fills the rest of the form's empty boxes too. Only your own card is read, and macOS asks first.",
+              keys: ["contacts.fill"], words: ["autofill", "address", "email", "phone", "name", "contacts", "me card"]),
 
         // Privacy
         .init(id: "shield", group: "blocking", icon: "shield.lefthalf.filled",
@@ -395,7 +411,7 @@ enum SettingsIndex {
               title: "Correct spelling as you type", detail: "Now in Edit › Spelling and Grammar, as in Safari",
               keys: ["autocorrect"], words: ["autocorrect", "spelling", "spell"], findOnly: true),
         .init(id: "note.split", group: "window", icon: "rectangle.split.2x1",
-              title: "Split View", detail: "Always there: drag a tab onto a page, or press ⌥⌘N",
+              title: "Split View", detail: "Always there: ⌥-click a tab, drag a tab onto a page, or press ⌥⌘N",
               keys: ["splitView"], words: ["split", "side by side"], kind: .note, findOnly: true),
         .init(id: "note.groups", group: "newtabs", icon: "folder",
               title: "Tab groups", detail: "Always there: right-click a tab › Add to New Group",
@@ -468,8 +484,10 @@ enum SettingsIndex {
         case "pages.dusk": return prefs.look != .light
         case "sidebar.roomy", "sidebar.player": return prefs.sidebar && !prefs.sideIcons
         case "sidebar.hides", "layout.cards", "pins.list": return prefs.sidebar
+        case "sidebar.foldIcons": return prefs.sidebar && !prefs.sideHides
         case "toolbar.left": return !prefs.sidebar
         case "profiles.oneWindow": return Profiles.shared.several
+        case "spaces.links": return prefs.usesSpaces
         case "tabs.frontBeside": return prefs.newTabPlace == .next
         case "newtab.recent": return prefs.floatingNewTab
         case "links.little.tabs": return prefs.littleLinks
@@ -483,7 +501,9 @@ enum SettingsIndex {
         case "pages.dusk": return "Only while Search isn't set to Light"
         case "toolbar.left": return "Only with the tabs across the top"
         case "sidebar.roomy": return "Only with titles in the column"
+        case "sidebar.foldIcons": return "Only with the column down a side and not hidden until the edge"
         case "profiles.oneWindow": return "Only with more than one profile"
+        case "spaces.links": return "Only with Spaces on"
         case "sidebar.player": return "Only with titles in the sidebar"
         case "tabs.frontBeside": return "Only with New tab position on After current"
         case "newtab.recent": return "Only with the new tab in a floating field"
