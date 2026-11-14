@@ -297,6 +297,10 @@ enum SettingsIndex {
               title: "Spaces", detail: "Separate sets of tabs, switched with ⌃1–⌃9 or a swipe",
               more: "Each space can be signed in where the others are or start afresh. Mission Control's own ⌃1–⌃9, if you turned them on, take those keys first.",
               keys: ["spaces"], words: ["workspaces", "profiles"]),
+        .init(id: "switcher.spaces", group: "spaces", icon: "rectangle.stack",
+              title: "Every space in the tab switcher", detail: "A row for each space in ⌃Tab, its latest tabs under its name",
+              more: "⌃↑ and ⌃↓ move between the rows.",
+              keys: ["switcher.spaces"], words: ["ctrl tab", "switcher", "rows"], parent: "spaces"),
         .init(id: "profiles", group: "spaces", icon: "person.2",
               title: "Profiles", detail: "Spaces with their own sign-ins, history and bookmarks",
               more: "In windows of their own, unless Profiles in one window is on. Extensions, passwords and settings are shared.",
@@ -499,6 +503,7 @@ enum SettingsIndex {
         case "tabs.frontBeside": return prefs.newTabPlace == .next
         case "newtab.recent": return prefs.floatingNewTab
         case "links.little.tabs": return prefs.littleLinks
+        case "switcher.spaces": return prefs.usesSpaces
         default: return true
         }
     }
@@ -516,6 +521,7 @@ enum SettingsIndex {
         case "tabs.frontBeside": return "Only with New tab position on After current"
         case "newtab.recent": return "Only with the new tab in a floating field"
         case "links.little.tabs": return "Only with links from other apps in a small window"
+        case "switcher.spaces": return "Only with Spaces on"
         default: return "Only with the tabs down a side"
         }
     }
