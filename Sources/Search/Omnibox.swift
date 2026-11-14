@@ -62,11 +62,11 @@ struct Omnibox: View {
             // page's cover fades without pulling its edges into view.
             if browser.fieldShowing {
                 if over {
-                    // The page is still there, just out of the way; or left
-                    // as it is, as in Arc (Prefs.unwashedField), the cover
-                    // clear and still taking the click that puts it away.
+                    // The page is still there, just set back, as under a peek;
+                    // or left as it is, as in Arc (Prefs.unwashedField), the
+                    // cover clear and still taking the click that puts it away.
                     Rectangle()
-                        .fill(browser.prefs.unwashedField ? Color.clear : Palette.ground.opacity(0.74))
+                        .fill(browser.prefs.unwashedField ? Color.clear : Palette.dim)
                         .contentShape(Rectangle())
                         .ignoresSafeArea(.all, edges: fitted ? [] : .all)
                         .onTapGesture { browser.dismiss() }
