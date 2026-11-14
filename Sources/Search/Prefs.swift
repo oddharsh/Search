@@ -677,6 +677,12 @@ final class Preferences: ObservableObject {
     @Published var listsPins: Bool {
         didSet { store.set(listsPins, forKey: "pins.list") }
     }
+    /// A click on the tab you're on names it, and its site's mark edits the
+    /// address (Browser.beginTabClick, AddressClick). Off, a click on it
+    /// edits the address, as upstream has it. Off unless asked for.
+    @Published var clickRenamesTab: Bool {
+        didSet { store.set(clickRenamesTab, forKey: "tabs.clickRenames") }
+    }
     /// A pin goes back to the page it was pinned at when it is closed with
     /// ⌘W and when Search opens again, as Arc's pins do, rather than keeping
     /// wherever it was taken since. The other half of "Pins keep their
@@ -903,6 +909,7 @@ final class Preferences: ObservableObject {
         switcherSpaceRows = store.bool(forKey: "switcher.spaces")
         fullScreenLights = store.bool(forKey: "fullscreen.lights")
         listsPins = store.bool(forKey: "pins.list")
+        clickRenamesTab = store.bool(forKey: "tabs.clickRenames")
         // "Pins keep their site" is one switch over two keys (see
         // SettingsIndex): on when either was on, on by default when neither
         // was ever touched (Drice, 24 Oct 2026), off when one was turned

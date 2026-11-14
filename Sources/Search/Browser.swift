@@ -2161,6 +2161,15 @@ final class Browser: NSObject, ObservableObject {
     /// The address the edit began with: nothing is offered for that.
     private var tabOriginal = ""
 
+    /// A click on the tab you are on names it, as a click on a file's name
+    /// in the Finder does. A tab with no page yet has nothing to name, so it
+    /// goes to the address; the site's mark in the tab goes there too, with
+    /// the site card under it (AddressClick).
+    /// Off in Settings › Flags, the click edits the address as it always did.
+    func beginTabClick(_ tab: Tab) {
+        if tab.isBlank || !prefs.clickRenamesTab { beginTabEdit(tab) } else { beginTabRename(tab) }
+    }
+
     func beginTabEdit(_ tab: Tab) {
         // The column of icons has no row to type in: the field over the
         // page, with the address in it, as ⌘L brings it.
