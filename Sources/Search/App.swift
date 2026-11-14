@@ -1088,6 +1088,7 @@ struct ContentView: View {
 
     private func dress(_ window: NSWindow) {
         browser.window = window
+        browser.fullScreen = window.styleMask.contains(.fullScreen)
         // Off screen at once, while a link's small window keeps the browser's
         // windows away (see Browsers.keepAway).
         Browsers.putAway()
@@ -1130,7 +1131,12 @@ struct ContentView: View {
             browser.prefs.sidebar && browser.prefs.sidePosition == .right
                 ? window.frame.width - (edges.side ?? browser.prefs.columnWidth) + Lights.centre.x
                 : Lights.centre.x
-        }, vertical: { _ in browser.prefs.iconColumn }) { measureLights() }
+        }, vertical: { _ in browser.prefs.iconColumn }, moved: { measureLights() }, fullScreen: { window in
+            // The column of icons stacks the lights, which FullScreenLights
+            // has no stack for: there, full screen is upstream's.
+            Fold.fullScreen(window, column: browser.prefs.sidebar && browser.prefs.fullScreenLights
+                && !browser.prefs.iconColumn)
+        })
         DispatchQueue.main.async { measureLights() }
 
         // The traffic lights are drawn — measured, they paint themselves — but
