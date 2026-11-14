@@ -71,7 +71,7 @@ struct SearchApp: App {
                     .shortcut("file.reopen")
                     .disabled(browser.ghosts.isEmpty && Browsers.lastClosedAt == nil)
                 Divider()
-                Button("Open Address…") { browser.edit() }
+                Button("Open Address…") { browser.openAddress() }
                     .shortcut("file.openAddress")
                 Divider()
                 // Another browser's bookmarks, history, passwords and the
@@ -1763,7 +1763,7 @@ struct ContentView: View {
         case "l" where !shifted:
             // Held down, the field stays up: its repeats would put it away
             // and raise it again, over and over.
-            if !event.isARepeat { browser.edit() }
+            if !event.isARepeat { browser.openAddress() }
         case "r" where !shifted:
             browser.reload()
         case "r" where shifted:

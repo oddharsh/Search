@@ -745,6 +745,19 @@ final class Preferences: ObservableObject {
     @Published var recentInNewTab: Bool {
         didSet { store.set(recentInNewTab, forKey: "newtab.recent") }
     }
+    /// ⌘L raises ⌘T's field wherever ⌘T would float it, as Arc's two keys
+    /// are one (see Browser.openAddress). Off unless asked for: off, ⌘L is
+    /// the field for this tab, as upstream has it.
+    @Published var commandLLaunches: Bool {
+        didSet { store.set(commandLLaunches, forKey: "field.cmdL") }
+    }
+    /// The field raised over a page leaves the page as it is, as Arc's does,
+    /// rather than setting it back under the window's ground (see Omnibox).
+    /// A click outside still puts the field away. Off unless asked for: off,
+    /// the page is set back, as upstream has it.
+    @Published var unwashedField: Bool {
+        didSet { store.set(unwashedField, forKey: "field.unwashed") }
+    }
 
     init() {
         navigationLeft = store.bool(forKey: "toolbar.left")
@@ -881,6 +894,8 @@ final class Preferences: ObservableObject {
         commandBar = store.bool(forKey: "commandbar")
         floatingNewTab = store.bool(forKey: "newtab.floating")
         recentInNewTab = store.bool(forKey: "newtab.recent")
+        commandLLaunches = store.bool(forKey: "field.cmdL")
+        unwashedField = store.bool(forKey: "field.unwashed")
         // On for everyone who never touched it (24 Oct 2026).
         let history = store.object(forKey: "swipe.history") as? Bool ?? true
         holdsHistory = history
