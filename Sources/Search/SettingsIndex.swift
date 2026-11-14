@@ -365,6 +365,12 @@ enum SettingsIndex {
               title: "Block ads and trackers", detail: "Third parties whose only job is to watch, and YouTube's ads",
               more: "On YouTube, the ads announced in the player's own data are taken out before the video starts. Turn it off for one site in its card: click the tab you're on.",
               keys: ["shield"], words: ["adblock", "ad blocker", "ads", "youtube"]),
+        .init(id: "shield.lists", group: "blocking", icon: "list.bullet.rectangle",
+              title: "Filter lists", detail: "EasyList, a hosts file or your own, added to the blocker and kept up to date",
+              more: "Each list is turned into WebKit's own rules and compiled once, a few seconds for a big one. What WebKit can't do, like scriptlets and redirects, is skipped and counted. WebKit takes up to 150,000 rules from one list.",
+              keys: [FilterLists.key],
+              words: ["easylist", "easyprivacy", "ublock", "filter list", "hosts file", "subscriptions", "custom filters"],
+              parent: "shield"),
         .init(id: "sites.keep", group: "blocking", icon: "eye.slash",
               title: "Prevent cross-site tracking", detail: "As in Safari. Private tabs keep it on",
               more: "Off, sites you rarely open keep their sign-ins, and trackers inside other sites can follow you across them again, as in Chrome.",
@@ -504,6 +510,7 @@ enum SettingsIndex {
         case "newtab.recent": return prefs.floatingNewTab
         case "links.little.tabs": return prefs.littleLinks
         case "switcher.spaces": return prefs.usesSpaces
+        case "shield.lists": return prefs.shielded
         default: return true
         }
     }
@@ -522,6 +529,7 @@ enum SettingsIndex {
         case "newtab.recent": return "Only with the new tab in a floating field"
         case "links.little.tabs": return "Only with links from other apps in a small window"
         case "switcher.spaces": return "Only with Spaces on"
+        case "shield.lists": return "Only while ads and trackers are blocked"
         default: return "Only with the tabs down a side"
         }
     }
