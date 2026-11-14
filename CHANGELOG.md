@@ -13,7 +13,7 @@ in [ROADMAP.md](ROADMAP.md).
 
 ### Fixed
 
-- Dusk keeps eBay's header dark once it sticks to the top of the page as you scroll, where it turned into a white bar. The header's colours come from a style sheet on another site, which Dusk can't read, so it takes them off the page as drawn, and it never looked at a ::before or ::after, or at anything a page restyled only by changing its classes. It now does both, on such a page, before the change is drawn.
+- Dusk keeps eBay's header dark once it sticks to the top of the page as you scroll, where it turned into a white bar. The header's colours come from a style sheet on another site, which Dusk can't read, so it takes them off the page as drawn, and it never looked at a ::before or ::after, or at anything a page restyled only by changing its classes. It now does both, on such a page, before the change is drawn. Where a page is darkened by the filter instead (before macOS 15, or a page whose styles never settle), a dark bar drawn by a ::before, or made dark by a class after the page loaded, stays dark rather than going pale, and one a class makes light again is let go.
 
 ### Held back
 
