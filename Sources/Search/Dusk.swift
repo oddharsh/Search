@@ -627,10 +627,16 @@ final class Dusk: ObservableObject {
           reclassed = [];
           if (!shown || !filtering) return;
           var t = performance.now();
+          // Only the element and its ::before and ::after, never what is
+          // under it, or a page that sets a class on <body> each time it
+          // scrolls would be looked at whole each time. Except once a dark
+          // mark goes: what it kept was never looked at, so it is now.
           batch.forEach(function (el) {
             if (!el.isConnected) return;
-            if (el.getAttribute(KEEP) === 'dark' && !dark(el, getComputedStyle(el))) el.removeAttribute(KEEP);
-            scan(el);
+            if (el.getAttribute(KEEP) === 'dark' && !dark(el, getComputedStyle(el))) {
+              el.removeAttribute(KEEP);
+              scan(el);
+            } else if (!el.closest('[' + KEEP + ']')) look(el);
           });
           settle();
           spent += performance.now() - t;

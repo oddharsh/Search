@@ -411,12 +411,14 @@ enum DuskColours {
       var untwinned = function (v) {
         return v && v.indexOf('oklch(') !== 0 && v !== 'transparent' && v !== 'none' && !/^rgba\(.*,\s*0\)$/.test(v) && !/^url\(/.test(v);
       };
-      var paint = function (tops) {
+      // Alone: the elements themselves, without what is under them, as a
+      // class change has it (see watchClasses).
+      var paint = function (tops, alone) {
         if (!unreadable) return;
         roots.forEach(watchClasses);
         var t = performance.now(), writing = 0;
-        var all = [];
-        tops.forEach(function (top) {
+        var all = alone ? tops : [];
+        if (!alone) tops.forEach(function (top) {
           if (!top || top.nodeType !== 1 && top.nodeType !== 11) return;
           // Inside another of the batch, it is read with that one.
           if (tops.some(function (other) { return other !== top && other.contains && other.contains(top); })) return;
@@ -761,10 +763,13 @@ enum DuskColours {
       // element whose classes change is read again, for the page's life,
       // before the frame is drawn. What a readable sheet colours has its
       // twin already, and computes to oklch, so is passed over unread.
-      var restyled = [], restyling = false, classed = new WeakSet();
+      // Only that element and its ::before and ::after are read, never
+      // what is under it: a page that sets a class on <body> each time it
+      // scrolls would have the whole page read each time.
+      var restyled = new Set(), restyling = false, classed = new WeakSet();
       var classes = new MutationObserver(function (records) {
         if (!showing) return;
-        records.forEach(function (r) { restyled.push(r.target); });
+        records.forEach(function (r) { restyled.add(r.target); });
         if (restyling) return;
         restyling = true;
         var frame = 0, timer = 0;
@@ -773,9 +778,9 @@ enum DuskColours {
           clearTimeout(timer);
           if (!restyling) return;
           restyling = false;
-          var batch = restyled.filter(function (n) { return n.isConnected; });
-          restyled = [];
-          if (showing && batch.length) paint(batch);
+          var batch = Array.from(restyled).filter(function (n) { return n.isConnected; });
+          restyled.clear();
+          if (showing && batch.length) paint(batch, true);
         };
         frame = requestAnimationFrame(go);
         timer = setTimeout(go, 100);
