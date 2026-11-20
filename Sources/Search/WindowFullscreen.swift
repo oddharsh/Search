@@ -33,6 +33,14 @@ final class WindowFullscreen: NSObject, WKScriptMessageHandler {
 
     @MainActor private func set(_ on: Bool) {
         guard let tab else { return }
+        // Any script on the page can post here, past the script's own check
+        // of the page's activation, so going in also needs a real click or
+        // key press in the last second, as Search's own world saw it.
+        // Refused, the page is told it is out. Coming back always goes.
+        if on, !tab.popupGesture.recent() {
+            tab.built?.evaluateJavaScript(Self.exit, in: nil, in: .page)
+            return
+        }
         guard let window = tab.built?.window ?? (on ? nil : taken) else {
             if tab.immersed != on { tab.immersed = on }
             return
