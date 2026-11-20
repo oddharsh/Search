@@ -71,9 +71,12 @@ struct Omnibox: View {
             // while the address line has the field (AddressLine.swift).
             if browser.fieldShowing, !browser.editingInline {
                 if over {
-                    // The page is still there, just out of the way.
+                    // The page is still there, just out of the way; or left
+                    // as it is, as in Arc (Prefs.unwashedField), the cover
+                    // clear and still taking the click that puts it away.
                     Rectangle()
-                        .fill(Palette.ground.opacity(0.74))
+                        .fill(browser.prefs.unwashedField ? Color.clear : Palette.ground.opacity(0.74))
+                        .contentShape(Rectangle())
                         .ignoresSafeArea(.all, edges: fitted ? [] : .all)
                         .onTapGesture { browser.dismiss() }
                         .transition(.opacity)

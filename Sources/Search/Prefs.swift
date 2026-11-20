@@ -1015,6 +1015,19 @@ final class Preferences: ObservableObject {
     @Published var floatingNewTab: Bool {
         didSet { store.set(floatingNewTab, forKey: "newtab.floating") }
     }
+    /// ⌘L raises ⌘T's field wherever ⌘T would float it, as Arc's two keys
+    /// are one (see Browser.openAddress). Off unless asked for: off, ⌘L is
+    /// the field for this tab, as upstream has it.
+    @Published var commandLLaunches: Bool {
+        didSet { store.set(commandLLaunches, forKey: "field.cmdL") }
+    }
+    /// The field raised over a page leaves the page as it is, as Arc's does,
+    /// rather than setting it back under the window's ground (see Omnibox).
+    /// A click outside still puts the field away. Off unless asked for: off,
+    /// the page is set back, as upstream has it.
+    @Published var unwashedField: Bool {
+        didSet { store.set(unwashedField, forKey: "field.unwashed") }
+    }
     /// The address field from any app, as Spotlight's comes: a key of your
     /// own raises it over the app in front, and Return opens what was typed
     /// in Search (see Launcher.swift). Off unless asked for, and no key
@@ -1208,6 +1221,8 @@ final class Preferences: ObservableObject {
         commandBar = store.bool(forKey: "commandbar")
         handoff = store.bool(forKey: "handoff")
         floatingNewTab = store.bool(forKey: "newtab.floating")
+        commandLLaunches = store.bool(forKey: "field.cmdL")
+        unwashedField = store.bool(forKey: "field.unwashed")
         launcher = store.bool(forKey: "launcher.on")
         launcherLittle = store.bool(forKey: "launcher.little")
         launcherKey = store.data(forKey: "launcher.key").flatMap { try? JSONDecoder().decode(LauncherKey.self, from: $0) }
