@@ -913,6 +913,12 @@ final class Preferences: ObservableObject {
             if oldValue, !profilesInOneWindow { Browsers.unmerge() }
         }
     }
+    /// With spaces, ⌃Tab shows every space, a row for each under its name,
+    /// rather than only the space on screen (see TabSwitcher.shelves). Off
+    /// unless asked for.
+    @Published var switcherSpaceRows: Bool {
+        didSet { store.set(switcherSpaceRows, forKey: "switcher.spaces") }
+    }
     /// Named, collapsible sections in the sidebar.
     /// Always on since the Settings rework (Drice, 24 Oct 2026): it only
     /// adds a command, so there is no switch. Still a property, for the
@@ -1218,6 +1224,7 @@ final class Preferences: ObservableObject {
         usesSpaces = store.bool(forKey: "spaces")
         spacesOnCommand = store.bool(forKey: Preferences.spacesOnCommandKey)
         profilesInOneWindow = store.bool(forKey: "profiles.oneWindow")
+        switcherSpaceRows = store.bool(forKey: "switcher.spaces")
         listsPins = store.bool(forKey: "pins.list")
         pinFolders = store.bool(forKey: "pins.folders")
         pinCommandOpensTab = store.bool(forKey: "pins.commandNewTab")

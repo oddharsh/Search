@@ -407,6 +407,10 @@ enum SettingsIndex {
               keys: [Preferences.spacesOnCommandKey],
               words: ["arc", "cmd", "command", "control", "ctrl", "spaces", "numbers", "digits", "shortcut", "keys", "⌘1", "⌃1", "switch spaces", "swap"],
               parent: "spaces"),
+        .init(id: "switcher.spaces", group: "spaces", icon: "rectangle.stack",
+              title: "Every space in the tab switcher", detail: "A row for each space in ⌃Tab, its latest tabs under its name",
+              more: "⌃↑ and ⌃↓ move between the rows.",
+              keys: ["switcher.spaces"], words: ["ctrl tab", "switcher", "rows"], parent: "spaces"),
         .init(id: "profiles", group: "spaces", icon: "person.2",
               title: "Profiles", detail: "Spaces with their own sign-ins, history and bookmarks",
               more: "In windows of their own, unless Profiles in one window is on. Extensions, passwords and settings are shared.",
@@ -680,6 +684,7 @@ enum SettingsIndex {
         case "links.peek.stays": return prefs.peeksLinks || prefs.pinsPeek
         case "launcher.key": return prefs.launcher
         case "icloud.erase": return ICloudSync.shared.on
+        case "switcher.spaces": return prefs.usesSpaces
         default: return true
         }
     }
@@ -705,6 +710,7 @@ enum SettingsIndex {
         case "mail.default": return "Only with a webmail chosen for email links"
         case "links.peek.stays": return "Only when links or pins open peeks"
         case "launcher.key": return "Only with the address field from any app on"
+        case "switcher.spaces": return "Only with Spaces on"
         default: return "Only with the tabs down a side"
         }
     }
