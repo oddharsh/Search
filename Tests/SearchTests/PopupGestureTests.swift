@@ -32,6 +32,19 @@ final class PopupGestureTests: XCTestCase {
         XCTAssertFalse(permission.take(origin: "same", now: 22.1))
     }
 
+    func testFullScreenAsksForAClickInTheLastSecondWithoutUsingItUp() {
+        var permission = PopupGesture()
+        XCTAssertFalse(permission.recent(now: 10))
+        permission.record(origin: "https://example.com:443", kind: "click", now: 10)
+        XCTAssertTrue(permission.recent(now: 10.9))
+        XCTAssertTrue(permission.take(origin: "https://example.com:443", now: 10.9))
+        XCTAssertTrue(permission.recent(now: 10.95))
+        XCTAssertFalse(permission.recent(now: 11.1))
+        permission.record(origin: "https://example.com:443", kind: "input", now: 20)
+        permission.clear()
+        XCTAssertFalse(permission.recent(now: 20.1))
+    }
+
     func testAsyncRequestCanOpenOnceWithinActivationWindow() {
         var permission = PopupGesture()
         XCTAssertFalse(permission.take(origin: "https://example.com:443", now: 10))

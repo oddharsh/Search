@@ -52,6 +52,13 @@ struct PopupGesture {
         return true
     }
 
+    /// Whether a real click or key press came in the last second, in any
+    /// frame, without using it up: a page asking for the screen
+    /// (WindowFullscreen) needs one, as WebKit's own full screen does.
+    func recent(now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Bool {
+        recorded && now >= time && now - time <= 1
+    }
+
     /// Whether a refused window came from an interaction that already
     /// had its one: a second window for the same click, or a page's own
     /// beside the tab Search opened for a ⌘-click (see claim()). That one

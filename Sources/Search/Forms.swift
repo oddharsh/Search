@@ -75,6 +75,10 @@ final class FormRelay: NSObject, WKScriptMessageHandler {
                 // WebKit started to give the page back is stale.
                 let on = body["on"] as? Bool ?? false
                 if on, tab?.built?.fullscreenState == .exitingFullscreen { break }
+                // The window's own full screen (WindowFullscreen) says so
+                // itself. This world still sees WebKit's state, which is off
+                // for such a page and would say "out" on the way in.
+                if tab?.answersFullScreen == true { break }
                 if tab?.immersed != on { tab?.immersed = on }
             default:
                 break
