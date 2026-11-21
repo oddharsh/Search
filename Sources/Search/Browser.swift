@@ -210,8 +210,6 @@ final class Browser: NSObject, ObservableObject {
         get { pageTab(.settings) != nil }
         set { if newValue { show(InternalPage(.settings, settingsPage.rawValue)) } else { putAway(.settings) } }
     }
-    /// The first-launch walk-through, over everything. Also from the menu.
-    @Published var welcoming = false
     /// What's new, once after an update (see WhatsNew.swift).
     @Published var newsShowing = false
     /// Every version's notes: Settings › About › What's New…, in a tab.
@@ -229,8 +227,6 @@ final class Browser: NSObject, ObservableObject {
         get { pageTab(.bookmarks) != nil }
         set { if newValue { show(InternalPage(.bookmarks)) } else { putAway(.bookmarks) } }
     }
-    /// The dropdown off the button.
-    @Published var bookmarksOpen = false
     /// What hangs off the button instead of the list: the card for one
     /// bookmark, its name and folder, as ⇧⌘B opens it.
     @Published var bookmarkCard: Bookmark.ID?
@@ -384,6 +380,8 @@ final class Browser: NSObject, ObservableObject {
         didSet {
             if !editing, siteChip != nil { siteChip = nil }
             if !editing, launching { launching = false }
+            // ⌘K is that field: whatever puts it away ends the switcher too.
+            if !editing, summoning { summoning = false }
         }
     }
     /// True while the field is up over a page for a tab that doesn't exist
@@ -470,10 +468,6 @@ final class Browser: NSObject, ObservableObject {
     /// What was typed in that moment, for the field once it has the keys.
     private var heldKeys: [NSEvent] = []
 
-    /// True while the field is a switcher rather than an address bar. ⌘K asks
-    /// one question — which of the pages I already have open — and answering it
-    /// with somewhere you went last week would be answering a different one.
-    @Published private(set) var summoning = false
     /// True between the first ⌘K and letting go of ⌘.
     var cycling = false
 
@@ -761,8 +755,57 @@ final class Browser: NSObject, ObservableObject {
     let curtain = Shared.curtain
     let loot = Shared.loot
     let floater = Shared.floater
-    /// True while the pointer is picking things to hide.
-    @Published private(set) var veiling = false
+    /// What holds the keyboard over the page. One at a time: raising one
+    /// puts away the one before it, as its own key would, rather than drawing
+    /// both (Welcome… then ⇧⌘U left the list over the welcome).
+    enum Overlay: Equatable {
+        case welcome, hidden, bookmarks, picking, switcher, newSpace
+        case peek(Tab)
+        case tabField(Tab.ID)
+
+        static func == (a: Overlay, b: Overlay) -> Bool {
+            switch (a, b) {
+            case (.welcome, .welcome), (.hidden, .hidden), (.bookmarks, .bookmarks),
+                 (.picking, .picking), (.switcher, .switcher), (.newSpace, .newSpace): true
+            case let (.peek(x), .peek(y)): x === y
+            case let (.tabField(x), .tabField(y)): x == y
+            case (.welcome, _), (.hidden, _), (.bookmarks, _), (.picking, _),
+                 (.switcher, _), (.newSpace, _), (.peek, _), (.tabField, _): false
+            }
+        }
+    }
+
+    @Published private(set) var overlay: Overlay? {
+        didSet {
+            guard let old = oldValue, old != overlay else { return }
+            if old == .hidden { stopPeeking() }
+            // Put away by another one rather than by its own key: what its
+            // own key would have tidied, tidied here.
+            guard overlay != nil else { return }
+            switch old {
+            case .welcome, .hidden, .bookmarks: break
+            case .picking:
+                picking?.stopPicking()
+                picking = nil
+            case .switcher: editing = false
+            case .newSpace: cancelSpaceCreation()
+            case .peek(let page):
+                peekFrom = nil
+                page.close()
+            case .tabField: cancelTabEdit()
+            }
+        }
+    }
+
+    private func overlay(_ kind: Overlay, _ up: Bool) {
+        if up { overlay = kind } else if overlay == kind { overlay = nil }
+    }
+
+    /// The first-launch walk-through, over everything. Also from the menu.
+    var welcoming: Bool {
+        get { overlay == .welcome }
+        set { overlay(.welcome, newValue) }
+    }
     /// The tab doing the picking, which is not always the one in front.
     private weak var picking: Tab?
     /// True while Capture…'s layer is over a page (see Snap.swift).
@@ -770,8 +813,45 @@ final class Browser: NSObject, ObservableObject {
     /// The tab it is over.
     weak var snapTab: Tab?
     /// True while the list of what is hidden here is up.
-    @Published var reviewing = false {
-        didSet { if !reviewing { stopPeeking() } }
+    var reviewing: Bool {
+        get { overlay == .hidden }
+        set { overlay(.hidden, newValue) }
+    }
+    /// The dropdown off the bookmarks button.
+    var bookmarksOpen: Bool {
+        get { overlay == .bookmarks }
+        set { overlay(.bookmarks, newValue) }
+    }
+    /// True while the pointer is picking things to hide.
+    private(set) var veiling: Bool {
+        get { overlay == .picking }
+        set { overlay(.picking, newValue) }
+    }
+    /// True while the field is a switcher rather than an address bar. ⌘K asks
+    /// one question — which of the pages I already have open — and answering it
+    /// with somewhere you went last week would be answering a different one.
+    private(set) var summoning: Bool {
+        get { overlay == .switcher }
+        set { overlay(.switcher, newValue) }
+    }
+    var makingSpace: Bool {
+        get { overlay == .newSpace }
+        set { overlay(.newSpace, newValue) }
+    }
+    /// A link's page, peeked at over this one (see Peek.swift).
+    var peekTab: Tab? {
+        get { if case .peek(let page) = overlay { page } else { nil } }
+        set {
+            if let page = newValue { overlay = .peek(page) } else if case .peek = overlay { overlay = nil }
+        }
+    }
+    /// Clicking the tab you are already on turns it into the address, short
+    /// form, ready to be changed (see beginTabEdit).
+    private(set) var editingTab: Tab.ID? {
+        get { if case .tabField(let id) = overlay { id } else { nil } }
+        set {
+            if let id = newValue { overlay = .tabField(id) } else if case .tabField = overlay { overlay = nil }
+        }
     }
 
     var hereHost: String? { curtain.host(of: active?.address) }
@@ -2398,9 +2478,6 @@ final class Browser: NSObject, ObservableObject {
 
     // MARK: - the address, in the tab itself
 
-    /// Clicking the tab you are already on turns it into the address, short
-    /// form, ready to be changed.
-    @Published private(set) var editingTab: Tab.ID?
     @Published var tabDraft = ""
     /// Set while that field is being used to name the tab rather than to go
     /// somewhere: the same field, the same keys, a different thing at the end.
@@ -2761,11 +2838,8 @@ final class Browser: NSObject, ObservableObject {
             if side != swipeSide.value { swipeSide.value = side }
         }
     }
-    @Published var makingSpace = false
     /// A tab being sent into the Space being made from its context menu.
     var afterSpaceCreated: ((Space) -> Void)?
-    /// A link's page, peeked at over this one (see Peek.swift).
-    @Published var peekTab: Tab?
     /// How far two fingers spreading on the peek are towards opening it as a
     /// tab, 0 to 1 (see PageView.magnify): the panel grows with it.
     @Published var peekPinch: CGFloat = 0
