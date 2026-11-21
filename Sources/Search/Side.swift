@@ -2019,6 +2019,7 @@ private struct SideRow: View, Equatable {
                             // A coding agent at work here: a dot on the
                             // icon's corner, the row as it was.
                             .overlay(alignment: .bottomTrailing) { AgentMark(tab: tab) }
+                            .modifier(AddressClick(armed: live && interactive && prefs.clickRenamesTab) { browser.beginTabEdit(tab) })
                     }
                     if tab.bench, !tab.agent {
                         // A script's tab, not yours.
@@ -2149,7 +2150,7 @@ private struct SideRow: View, Equatable {
         .modifier(OneClick(double: false) {
             guard interactive, !selectedOnPress, TabClick.flags.intersection([.command, .shift, .option]).isEmpty else { return }
             browser.clearTabSelection()
-            if live { browser.beginTabEdit(tab) } else { browser.select(tab) }
+            if live { browser.beginTabClick(tab) } else { browser.select(tab) }
         })
         .modifier(ModifiedTabClick { if interactive && !editing { browser.extendTabSelection(to: tab, modifiers: $0) } })
         .modifier(OptionClick { if interactive && !editing { browser.optionClick(tab) } })
