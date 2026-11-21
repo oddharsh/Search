@@ -455,7 +455,7 @@ enum SettingsIndex {
               words: ["command click", "cmd click", "pinned", "arc", "selection", "multi select"]),
         .init(id: "newtab.floating", group: "opening", icon: "rectangle.and.text.magnifyingglass",
               title: "New tab in a floating field", detail: "⌘T raises the address field over the page, as in Arc",
-              more: "Return opens what you typed in a new tab; Escape, ⌘W or a click outside puts it away.",
+              more: "Return opens what you typed in a new tab, or goes to the open tab it names, by name or address; New tab (⌘T or the button) again, Escape, ⌘W or a click outside puts it away.",
               keys: ["newtab.floating"], words: ["command bar", "cmd t", "spotlight"]),
         .init(id: "newtab.recent", group: "opening", icon: "clock.arrow.circlepath",
               title: "Recent places in the new tab", detail: "Before you type, ⌘T's field lists the last three places you went",
